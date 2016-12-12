@@ -29,8 +29,8 @@ ____________________________________________________________________________*/
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
-#include <netdb.h>
-#include <pwd.h>
+//#include <netdb.h>
+//#include <pwd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,31 +39,36 @@ ____________________________________________________________________________*/
 #include <time.h>
 #include <unistd.h>
 
-#include <arpa/inet.h>
-#include <net/if.h>
+//#include <arpa/inet.h>
+//#include <net/if.h>
 
-#include <sys/ipc.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/shm.h>
+//#include <sys/ipc.h>
+//#include <sys/ioctl.h>
+//#include <sys/socket.h>
+//#include <sys/shm.h>
 #include <sys/stat.h>
-#include <sys/time.h>   
+#include <sys/time.h>
 #include <sys/types.h>
 
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/times.h>
+//#include <sys/times.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+//#include <sys/wait.h>
 
 #ifdef __linux__ 
 #include <dirent.h>
 #include <semaphore.h>
-#else
-#include <stropts.h>
-#include <sys/dirent.h>
-#include <sys/semaphore.h>
-#include <sys/sockio.h>
+#include <socket.h>
+#endif
+
+#ifdef _WIN64
+#include <dirent.h>
+#include <semaphore.h>
+#include <winsock2.h>
+#include <mswsock.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 #endif
 
 /*__CONSTANTES______________________________________________________________*/
@@ -1704,10 +1709,13 @@ AUXF_local_address_load(void)
     SUCESO2("ERROR: socket() = %d (%s)", errno, strerror(errno));
   }
 
+// TODO
+#ifndef _WIN64
   else if(ioctl(s, SIOCGIFCONF, &ifconf) < 0)
   {
     SUCESO2("ERROR: ioctl() = %d (%s)", errno, strerror(errno));
   }
+#endif
 
   else
   {
@@ -1737,8 +1745,10 @@ AUXF_local_address_load(void)
 
       if(gai_errno != 0)
       {
+// TODO
+#ifndef _WIN64
         if(gai_errno == EAI_SYSTEM) gai_errno = errno; free(pla);
-	
+#endif
         SUCESO2("ERROR: getnameinfo() = %d (%s)", gai_errno, gai_strerror(gai_errno));
       }
 

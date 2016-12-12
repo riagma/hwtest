@@ -18,26 +18,11 @@ ______________________________________________________________________________*/
 
 /*__INCLUDES DEL SISTEMA______________________________________________________*/
 
-#include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
-#include <grp.h>
-#include <pthread.h>
-#include <pwd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <sys/sem.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include <sys/time.h>   
-#include <sys/types.h>
+#include <strings.h>
  
 /*__INCLUDES DE LA BD_________________________________________________________*/
 
@@ -481,9 +466,14 @@ JSON_object_new(void)
 
 //----------------
 
-  if(RFTR_initializeRefTree(ptrObject->pair, &p, &p.tree, JSON_pair_cmp) < 0)
+  if(RLST_initializeRefList(ptrObject->pairList, &p, &p.list) < 0)
   {
     JSON_FATAL0("RLST_initializeRefList()");
+  }
+
+  if(RFTR_initializeRefTree(ptrObject->pairTree, &p, &p.tree, JSON_pair_cmp) < 0)
+  {
+    JSON_FATAL0("RFTR_initializeRefTree()");
   }
 
 //----------------
@@ -504,7 +494,7 @@ JSON_object_delete(JSON_object_t* inObject)
 
 //----------------
 
-  while((ptrPair = RFTR_extractMini(inObject->pair)))
+  while((ptrPair = RFTR_extractMini(inObject->pairTree)))
   {
 	JSON_pair_delete(ptrPair);
   }
@@ -580,63 +570,45 @@ JSON_object_decode
 
 //----------------
   
-  BUFF_refs_add(inObject->refs, inBuffer);
+  BUFF_refs_add(inObject->buffRefs, inBuffer);
 
-  pc = (char*)(inBuffer->data + inBuffer->idx);
+  pc = (char*)(inBuffer->data + inBuffer->idx); pc[inBuffer->len] = 0;
 
-  ps = strchr(pc, '{');
+//----------------
 
-  if(inObject->decodeState == JSON_DECODE_STATE_INIT)
+  if(inObject->decodeState == JSON_DECODE_STATE_INIT && ret == JSON_RC_OK)
   {
-    inObject->metstr        = ZEROLEN;
-    inObject->reason        = ZEROLEN;
-    inObject->to            = ZEROLEN;
-    inObject->from          = ZEROLEN;
-    inObject->callId        = ZEROLEN;
-    inObject->contentType   = ZEROLEN;
-    inObject->contentLength = -1;
+    ps = strchr(pc, '{');
 
-//  inObject->toTag         = ZEROLEN;
-//  inObject->fromTag       = ZEROLEN;
-//  inObject->viaBranch     = ZEROLEN;
-
-    inObject->viaH          = NULL;
-    inObject->routeH        = NULL;
-    inObject->recordRouteH  = NULL;
-    inObject->contactH      = NULL;
-
-    inObject->decodeState = JSON_DECODE_STATE_START;
-  }
-
-//---------------- START LINE
-  
-  if(inObject->decodeState == JSON_DECODE_STATE_START)
-  {
-    line = JSON_object_line_decode(inObject, &buff, &len);
-
-    if(line != NULL)
+    if(ps == NULL)
     {
-      ret = JSON_object_start_line_decode(inObject, line);
-
-      if(ret != JSON_RC_OK)
-      {
-	SUCESO2("ERROR: JSON_object_start_line_decode(%s) = %d", line, ret);
-      }
-
-      else { inObject->decodeState = JSON_DECODE_STATE_HEADER; }
-    }
-
-    else if(len < 0)
-    {
-      SUCESO4("ERROR: JSON_object_line_decode(%p:%ld:%ld) = %ld",
-	       buff,
-	       buff->idx, 
-	       buff->len, len);
+      inBuffer->idx = inBuffer->len;
 
       ret = JSON_RC_ERROR;
     }
 
-    else { ret = JSON_RC_INCOMPLETE; }
+    else // if(ps != NULL)
+    {
+      inBuffer->idx = ps - pc + 1; pc = ps + 1; *ps = 0;
+
+      inObject->decodeState = JSON_DECODE_STATE_PAIR;
+    }
+  }
+
+//----------------
+  
+  while((inObject->decodeState == JSON_DECODE_STATE_PAIR ||
+	     inObject->decodeState == JSON_DECODE_STATE_VALUE) && ret == JSON_RC_OK)
+  {
+	if(inObject->decodeState == JSON_DECODE_STATE_PAIR && ret == JSON_RC_OK)
+	{
+
+	}
+
+	if(inObject->decodeState == JSON_DECODE_STATE_VALUE && ret == JSON_RC_OK)
+	{
+
+	}
   }
 
 //---------------- MESSAGE HEADERS

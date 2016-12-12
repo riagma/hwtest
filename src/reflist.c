@@ -19,29 +19,8 @@ ______________________________________________________________________________*/
 
 /*__INCLUDES DEL SISTEMA______________________________________________________*/
 
-#include <ctype.h>
-#include <dirent.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include <sys/time.h>   
-#include <sys/types.h>
-
-#ifdef __linux__ 
-#include <dirent.h>
-#include <semaphore.h>
-#else
-#include <sys/dirent.h>
-#include <sys/semaphore.h>
-#endif
 
 /*__INCLUDES DE LA BD_________________________________________________________*/
 

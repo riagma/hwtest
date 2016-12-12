@@ -86,6 +86,20 @@ extern const char*			JSON_value[];
 
 //----------------
 
+enum JSON_DECODE_STATE_e
+{
+  JSON_DECODE_STATE_INIT,		// 00
+  JSON_DECODE_STATE_PAIR,		// 01
+  JSON_DECODE_STATE_VALUE,		// 02
+  JSON_DECODE_STATE_SUCCESS,	// 03
+
+  JSON_DECODE_STATE_TOTAL
+};
+
+// extern const char* JSON_decode_state[];
+
+//----------------
+
 enum JSON_RC_e
 {
   JSON_RC_TIMEOUT			= -6,
@@ -141,6 +155,7 @@ struct JSON_pair_tag
   char*					name;
   JSON_value_t*			value;
 
+  RLST_element_t		list;
   RFTR_element_t		tree;
   MEMO_element_t		memo;
 };
@@ -149,9 +164,13 @@ struct JSON_pair_tag
 
 struct JSON_object_tag
 {
-  BUFF_refs_t*			refs;
+  BUFF_refs_t*			buffRefs;
 
-  RFTR_reftree_t		pair[1];
+  RLST_reflist_t		pairList[1];
+  RFTR_reftree_t		pairTree[1];
+
+  int					decodeState;
+
   MEMO_element_t		memo;
 };
 
