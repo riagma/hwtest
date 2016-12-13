@@ -18,26 +18,11 @@ ______________________________________________________________________________*/
 
 /*__INCLUDES DEL SISTEMA______________________________________________________*/
 
-#include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
-#include <grp.h>
-#include <pthread.h>
-#include <pwd.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <signal.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <sys/sem.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include <sys/time.h>   
-#include <sys/types.h>
  
 /*__INCLUDES DE LA BD_________________________________________________________*/
 
@@ -77,11 +62,15 @@ const char* BUFF_RC[] =
 
 //----------------
 
-static int					BUFF_MemoInit_s = 0;
+static int					BUFF_Init_s = 0;
 
-static MEMO_refmemo_t*		BUFF_RefsMemo_s = 0;
-static long					BUFF_RefsUsed_s = 0;
-static long					BUFF_RefsMark_s = 0;
+static MEMO_refmemo_t*		BUFF_ElemMemo_s = 0;
+static long					BUFF_ElemUsed_s = 0;
+static long					BUFF_ElemMark_s = 0;
+
+static MEMO_refmemo_t*		BUFF_BuffMemo_s = 0;
+static long					BUFF_BuffUsed_s = 0;
+static long					BUFF_BuffMark_s = 0;
 
 static RFTR_reftree_t*		BUFF_MemoTree_s = 0;
 static long					BUFF_MemoUsed_s = 0;
@@ -101,7 +90,8 @@ static long					BUFF_MemoMark_s = 0;
 int 
 BUFF_initialize(void)
 {
-  BUFF_refs_t			r;
+  BUFF_elem_t			e;
+  BUFF_buff_t			b;
   BUFF_memo_t			m;
 
   int					ret = BUFF_RC_OK;
@@ -110,13 +100,20 @@ BUFF_initialize(void)
 
 //----------------
 
-  if(BUFF_MemoInit_s == BUFF_FALSE)
+  if(BUFF_Init_s == BUFF_FALSE)
   {
-	BUFF_MemoInit_s = BUFF_TRUE;
+	BUFF_Init_s = BUFF_TRUE;
 
-	BUFF_RefsMemo_s = MEMO_createRefMemo(&r, &r.memo, sizeof(r), 128, 2);
+	BUFF_ElemMemo_s = MEMO_createRefMemo(&e, &e.memo, sizeof(e), 256, 4);
 
-    if(BUFF_RefsMemo_s == NULL)
+    if(BUFF_ElemMemo_s == NULL)
+    {
+      BUFF_FATAL0("ERROR: MEMO_createRefMemo()");
+    }
+
+	BUFF_BuffMemo_s = MEMO_createRefMemo(&b, &b.memo, sizeof(b), 16, 2);
+
+    if(BUFF_BuffMemo_s == NULL)
     {
       BUFF_FATAL0("ERROR: MEMO_createRefMemo()");
     }
@@ -150,10 +147,15 @@ BUFF_memo_view(void)
 										ptrBuffMemo->mark);
   }
 
-  SUCESO4("BUFF-REFS(%p) = %ld(%ld)(%ld)", BUFF_RefsMemo_s,
-	                                       BUFF_RefsUsed_s,
-	                                       BUFF_RefsMark_s,
-									       BUFF_RefsMemo_s->list.nume);
+  SUCESO4("BUFF-ELEM(%p) = %ld(%ld)(%ld)", BUFF_ElemMemo_s,
+	                                       BUFF_ElemUsed_s,
+	                                       BUFF_ElemMark_s,
+									       BUFF_ElemMemo_s->list.nume);
+
+  SUCESO4("BUFF-BUFF(%p) = %ld(%ld)(%ld)", BUFF_BuffMemo_s,
+	                                       BUFF_BuffUsed_s,
+	                                       BUFF_BuffMark_s,
+									       BUFF_ElemMemo_s->list.nume);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -164,7 +166,7 @@ BUFF_memo_new(long inSize, long inBlen, long inBmin)
 {
   BUFF_memo_t*		ptrBuffMemo = NULL;
 
-  BUFF_data_t		d;
+  BUFF_part_t		d;
 
   long				size;
 
@@ -193,9 +195,7 @@ BUFF_memo_new(long inSize, long inBlen, long inBmin)
 
 //----------------
 
-  size = sizeof(BUFF_data_t) + inSize + sizeof(void*) * 2;
-
-  size = BUFF_ALING(size);
+  size = sizeof(BUFF_part_t) + inSize + 1; size = BUFF_ALING(size);
 
   ptrBuffMemo->refm = MEMO_createRefMemo(&d, &d.memo, size, inBlen, inBmin);
 
@@ -255,48 +255,80 @@ BUFF_memo_cmp(void* inVoidA, void* inVoidB)
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-BUFF_data_t*
-BUFF_data_new(BUFF_memo_t* inBuffMemo)
+BUFF_part_t*
+BUFF_part_new(BUFF_buff_t* inBuffBuff)
 {
-  BUFF_data_t*			ptrBuffData = NULL;
+  BUFF_part_t*			ptrBuffData = NULL;
+  BUFF_elem_t*			ptrBuffElem = NULL;
 
-  static size_t			offs = sizeof(BUFF_data_t);
+  static size_t			offs = sizeof(BUFF_part_t);
 
-  TRAZA0("Entering in BUFF_data_new()");
+  TRAZA0("Entering in BUFF_part_new()");
 
 //----------------
 
-  ptrBuffData = (BUFF_data_t*) MEMO_new_no_ini(inBuffMemo->refm);
+  ptrBuffData = (BUFF_part_t*) MEMO_new_no_ini(inBuffBuff->type->refm);
 
   if(ptrBuffData == NULL)
   {
     BUFF_FATAL0("MEMO_new()");
   }
 
-  inBuffMemo->used++;
+  inBuffBuff->type->used++;
 
-  if(inBuffMemo->mark < inBuffMemo->used)
+  if(inBuffBuff->type->mark < inBuffBuff->type->used)
   {
-	inBuffMemo->mark = inBuffMemo->used;
+	inBuffBuff->type->mark = inBuffBuff->type->used;
   }
 
 //----------------
 
   ptrBuffData->data = (unsigned char*)(ptrBuffData) + offs;
+  ptrBuffData->size = inBuffBuff->type->size;
   ptrBuffData->refs = 1;
 
   ptrBuffData->idx = 0;
   ptrBuffData->len = 0;
 
-  ptrBuffData->next = NULL;
-  ptrBuffData->prev = NULL;
-  ptrBuffData->type = inBuffMemo;
-
   ptrBuffData->data[0] = 0;
 
 //----------------
 
-  TRAZA1("Returning from BUFF_data_new() = %p", ptrBuffData);
+  ptrBuffElem = (BUFF_elem_t*) MEMO_new(BUFF_ElemMemo_s);
+
+  if(ptrBuffElem == NULL)
+  {
+    BUFF_FATAL0("MEMO_new()");
+  }
+
+  BUFF_ElemUsed_s++;
+
+  if(BUFF_ElemMark_s < BUFF_ElemUsed_s)
+  {
+    BUFF_ElemMark_s = BUFF_ElemUsed_s;
+  }
+
+//----------------
+
+  ptrBuffElem->part = ptrBuffData;
+
+  if(inBuffBuff->tail == NULL)
+  {
+	inBuffBuff->head = ptrBuffElem;
+	inBuffBuff->tail = ptrBuffElem;
+  }
+
+  else // if(inBuffBuff->tail == NULL)
+  {
+	inBuffBuff->tail->next = ptrBuffElem;
+	ptrBuffElem->prev = inBuffBuff->tail;
+
+	inBuffBuff->tail = ptrBuffElem;
+  }
+
+//----------------
+
+  TRAZA1("Returning from BUFF_part_new() = %p", ptrBuffData);
 
   return ptrBuffData;
 }
@@ -304,164 +336,187 @@ BUFF_data_new(BUFF_memo_t* inBuffMemo)
 /*----------------------------------------------------------------------------*/
 
 void
-BUFF_data_delete(BUFF_data_t* inBuffData)
+BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData)
 {
-  TRAZA1("Entering in BUFF_data_delete(%p)", inBuffData);
-
-//----------------
-
-  inBuffData->refs--;
-
-  if(inBuffData->refs <= 0)
-  {
-	if(inBuffData->prev != NULL)
-	{
-	  inBuffData->prev->next = inBuffData->next;
-	}
-
-	if(inBuffData->next != NULL)
-	{
-	  inBuffData->next->prev = inBuffData->prev;
-	}
-
-	inBuffData->type->used--;
-
-    MEMO_delete(inBuffData->type->refm, inBuffData);
-  }
-
-//----------------
-
-  TRAZA0("Returning from BUFF_data_delete()");
-}
-
-/*----------------------------------------------------------------------------*/
-
-BUFF_data_t*
-BUFF_data_add(BUFF_data_t* inBuffData)
-{
-  BUFF_data_t*			ptrBuffData = inBuffData;
-
-  TRAZA0("Entering in BUFF_data_add()");
-
-//----------------
-
-  while(ptrBuffData->next != NULL) ptrBuffData = ptrBuffData->next;
-
-  ptrBuffData->next = BUFF_data_new(ptrBuffData->type);
-
-  ptrBuffData->next->prev = ptrBuffData;
-
-//----------------
-
-  TRAZA1("Returning from BUFF_data_add() = %p", ptrBuffData->next);
-
-  return ptrBuffData->next;
-}
-
-/*----------------------------------------------------------------------------*/
-/*----------------------------------------------------------------------------*/
-
-BUFF_refs_t*
-BUFF_refs_new(void)
-{
-  BUFF_refs_t*		ptrBuffRefs = NULL;
-
-  TRAZA0("Entering in BUFF_refs_new()");
-
-//----------------
-
-  ptrBuffRefs = (BUFF_refs_t*) MEMO_new(BUFF_RefsMemo_s);
-
-  if(ptrBuffRefs == NULL)
-  {
-    BUFF_FATAL0("MEMO_new()");
-  }
-
-  BUFF_RefsUsed_s++;
-
-  if(BUFF_RefsMark_s < BUFF_RefsUsed_s)
-  {
-	BUFF_RefsMark_s = BUFF_RefsUsed_s;
-  }
-
- //----------------
-
-  TRAZA1("Returning from BUFF_refs_new() = %p", ptrBuffRefs);
-
-  return ptrBuffRefs;
-}
-
-/*----------------------------------------------------------------------------*/
-
-void
-BUFF_refs_delete(BUFF_refs_t* inBuffRefs)
-{
-  TRAZA1("Entering in BUFF_refs_delete(%p)", inBuffRefs);
-
-//----------------
-
-  MEMO_delete(BUFF_RefsMemo_s, inBuffRefs);
-
-  BUFF_RefsUsed_s--;
-
-//----------------
-
-  TRAZA0("Returning from BUFF_refs_delete()");
-}
-
-/*----------------------------------------------------------------------------*/
-
-void
-BUFF_refs_add
-(
-  BUFF_refs_t* 			inBuffRefs,
-  BUFF_data_t* 			inBuffData
-)
-{
-  BUFF_refs_t* 			ptrBuffRefs;
+  BUFF_elem_t*			ptrBuffElem;
 
   int					found = BUFF_FALSE;
 
-  TRAZA2("Entering in BUFF_refs_add(%p, %p)", inBuffRefs, inBuffData);
+  TRAZA2("Entering in BUFF_part_delete(%p, %p)", inBuffBuff, inBuffData);
 
 //----------------
 
-  ptrBuffRefs = inBuffRefs;
+  ptrBuffElem = inBuffBuff->head;
 
-  if(ptrBuffRefs->refs == inBuffData)
+  while(ptrBuffElem != NULL && found == BUFF_FALSE)
   {
-    found = BUFF_TRUE;
+	if(ptrBuffElem->part == inBuffData)
+	{
+	  found = BUFF_TRUE;
+	}
+
+	else { ptrBuffElem = ptrBuffElem->next; }
   }
 
-  else while(ptrBuffRefs->next != NULL && found == BUFF_FALSE)
-  {
-	ptrBuffRefs = ptrBuffRefs->next;
+//----------------
 
-    if(ptrBuffRefs->refs == inBuffData)
+  if(found == BUFF_TRUE)
+  {
+    inBuffData->refs--;
+
+    if(inBuffData->refs <= 0)
     {
-      found = BUFF_TRUE;
+      inBuffBuff->type->used--;
+
+      MEMO_delete(inBuffBuff->type->refm, inBuffData);
     }
+
+	if(ptrBuffElem->prev != NULL)
+	{
+	  ptrBuffElem->prev->next = ptrBuffElem->next;
+	}
+
+	if(ptrBuffElem->next != NULL)
+	{
+	  ptrBuffElem->next->prev = ptrBuffElem->prev;
+	}
+
+	if(inBuffBuff->head != ptrBuffElem)
+	{
+	  inBuffBuff->head = ptrBuffElem->next;
+	}
+
+	if(inBuffBuff->tail != ptrBuffElem)
+	{
+	  inBuffBuff->tail = ptrBuffElem->prev;
+	}
+
+    MEMO_delete(BUFF_ElemMemo_s, ptrBuffElem);
+
+    BUFF_ElemUsed_s--;
+  }
+
+//----------------
+
+  TRAZA0("Returning from BUFF_part_delete()");
+}
+
+/*----------------------------------------------------------------------------*/
+
+void
+BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData)
+{
+  BUFF_elem_t*			ptrBuffElem;
+
+  int					found = BUFF_FALSE;
+
+  TRAZA2("Entering in BUFF_part_add(%p, %p)", inBuffBuff, inBuffData);
+
+//----------------
+
+  ptrBuffElem = inBuffBuff->head;
+
+  while(ptrBuffElem != NULL && found == BUFF_FALSE)
+  {
+  	if(ptrBuffElem->part == inBuffData)
+  	{
+  	  found = BUFF_TRUE;
+  	}
+
+  	else { ptrBuffElem = ptrBuffElem->next; }
   }
 
 //----------------
 
   if(found == BUFF_FALSE)
   {
-    if(ptrBuffRefs->refs != NULL)
+    ptrBuffElem = (BUFF_elem_t*) MEMO_new(BUFF_ElemMemo_s);
+
+    if(ptrBuffElem == NULL)
     {
-      ptrBuffRefs->next = BUFF_refs_new();
-
-      ptrBuffRefs = ptrBuffRefs->next;
+      BUFF_FATAL0("MEMO_new()");
     }
-      
-    ptrBuffRefs->refs = inBuffData;
 
-    inBuffData->refs++;
+    BUFF_ElemUsed_s++;
+
+    if(BUFF_ElemMark_s < BUFF_ElemUsed_s)
+    {
+      BUFF_ElemMark_s = BUFF_ElemUsed_s;
+    }
+
+//----------------
+
+    ptrBuffElem->part = inBuffData;
+
+    if(inBuffBuff->tail == NULL)
+    {
+      inBuffBuff->head = ptrBuffElem;
+      inBuffBuff->tail = ptrBuffElem;
+    }
+
+    else // if(inBuffBuff->tail == NULL)
+    {
+      inBuffBuff->tail->next = ptrBuffElem;
+      ptrBuffElem->prev = inBuffBuff->tail;
+
+      inBuffBuff->tail = ptrBuffElem;
+    }
   }
 
 //----------------
 
-  TRAZA0("Returning from BUFF_burefs_add()");
+  TRAZA0("Returning from BUFF_part_add()");
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+char*
+BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars)
+{
+  BUFF_part_t 		part;
+
+  char*				pc;
+  char*				ps;
+
+  long				off = 0;
+  int				end = BUFF_FALSE;
+
+  TRAZA2("Entering in BUFF_strchr(%p, %s)", inBuffer, inChars);
+
+//----------------
+
+  part = inBuffer->org->part;
+
+  pc = (char*)(part->data + part->idx);
+
+  while(end == BUFF_FALSE)
+  {
+    ps = strpbrk(pc, inChars);
+
+	if(ps != NULL)
+	{
+      if(inBuffer->idx == inBuffer->org)
+	  {
+
+	  }
+
+	  else // if(inBuffer->idx != inBuffer->org)
+	  {
+
+	  }
+	}
+
+	else
+	{
+	}
+  }
+
+//----------------
+
+  TRAZA1("Returning from BUFF_strchr() = %p", ps);
+
+  return ps;
 }
 
 /*----------------------------------------------------------------------------*/

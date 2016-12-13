@@ -544,20 +544,17 @@ int
 JSON_object_decode
 (
   JSON_object_t*		inObject,
-  BUFF_data_t*			inBuffer
+  BUFF_buff_t*			inBuffer
 )
 {
-  BUFF_data_t*			buff = inBuffer;
+  BUFF_data_t*			data = inBuffer->idx->data;
 
   char*					ps;
   char*					pc;
 
-  long					len = 0;
-  char*					line = NULL;
+  char*					pi;
 
-  char					sep;
-
-  long					contentLength;
+  int					state;
 
   int					end = JSON_FALSE;
   int					ret = JSON_RC_OK;
@@ -569,10 +566,12 @@ JSON_object_decode
 	      inBuffer->len);
 
 //----------------
-  
-  BUFF_refs_add(inObject->buffRefs, inBuffer);
 
-  pc = (char*)(inBuffer->data + inBuffer->idx); pc[inBuffer->len] = 0;
+  BUFF_buff_add(inObject->buffRefs, data);
+
+  pi = (char*)(buff->data + buff->idx);
+
+  pc = pi; pc[buff->len] = 0;
 
 //----------------
 
@@ -582,14 +581,49 @@ JSON_object_decode
 
     if(ps == NULL)
     {
-      inBuffer->idx = inBuffer->len;
+      buff->idx = buff->len;
 
-      ret = JSON_RC_ERROR;
+      ps = (char*)(buff->data + buff->idx);
+
+      while(*pc==' ' || *pc=='\t' || *pc=='\r' || *pc=='\n') pc++;
+
+      if(pc != ps)
+      {
+        SUCESO2("ERROR: Decode object (%s%s)", pi, pi ? pi : "");
+
+        ret = JSON_RC_ERROR;
+      }
+
+      else if(buff->len < buff->type->size)
+      {
+    	ret = JSON_RC_INCOMPLETE;
+      }
+
+      else if(buff->next == NULL)
+      {
+    	ret = JSON_RC_INCOMPLETE;
+      }
+
+      else if(buff->next->len == 0)
+      {
+    	ret = JSON_RC_INCOMPLETE;
+      }
+
+      else // if(buff->next->len > 0)
+      {
+    	buff = buff->next; BUFF_refs_add(inObject->buffRefs, buff);
+
+    	pi = (char*)(buff->data + 0); // buff->idx);
+
+    	pc = pi; pc[buff->len] = 0;
+
+    	ps = strchr(pc, '{');
+      }
     }
 
     else // if(ps != NULL)
     {
-      inBuffer->idx = ps - pc + 1; pc = ps + 1; *ps = 0;
+      buff->idx = ps - pc + 1; pc = ps + 1; *ps = 0;
 
       inObject->decodeState = JSON_DECODE_STATE_PAIR;
     }
@@ -602,7 +636,38 @@ JSON_object_decode
   {
 	if(inObject->decodeState == JSON_DECODE_STATE_PAIR && ret == JSON_RC_OK)
 	{
+	  ps = strchr(pc, '"');
 
+	  for(state = 0, end = 0; end == 0 && ret == 0;)
+	  {
+	    if(state == 0)
+	    {
+	      if(ps != NULL)
+	      {
+	    	while(*pc==' ' || *pc=='\t' || *pc=='\r' || *pc=='\n') pc++;
+
+	    	if(pc == ps)
+	    	{
+	    	  pc = ps + 1; state = 1;
+
+	    	  ps = strpbrk(pc, "\\\"");
+	    	}
+
+	    	else // if(pc != ps)
+	    	{
+              SUCESO2("ERROR: Decode object (%s%s)", pi, pi ? pi : "");
+
+              ret = JSON_RC_ERROR;
+	    	}
+	      }
+
+	      else // if(*ps == '/')
+	      {
+            while(*pc==' ' || *pc=='\t' || *pc=='\r' || *pc=='\n') pc++;
+	      }
+	    }
+
+	  }
 	}
 
 	if(inObject->decodeState == JSON_DECODE_STATE_VALUE && ret == JSON_RC_OK)
@@ -610,166 +675,152 @@ JSON_object_decode
 
 	}
   }
+//----------------
 
-//---------------- MESSAGE HEADERS
-  
-  while(inObject->decodeState == JSON_DECODE_STATE_HEADER && ret == 0)
+  TRAZA1("Returning from JSON_object_decode() = %d", ret);
+
+  return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int
+JSON_string_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t**			ioBuffer
+)
+{
+  BUFF_buff_t*			buff = *ioBuffer;
+
+  char*					ps;
+  char*					pc;
+  char*					pi;
+
+  long					len = 0;
+
+  int					state;
+
+  int					end = JSON_FALSE;
+  int					ret = JSON_RC_OK;
+
+  TRAZA4("Entering in JSON_string_decode(%p, %p:%ld:%ld)",
+          inObject,
+          inBuffer,
+	      inBuffer->idx,
+	      inBuffer->len);
+
+//----------------
+
+  pi = (char*)(buff->data + buff->idx);
+
+  pc = pi; pc[buff->len] = 0;
+
+//----------------
+
+  ps = strchr(pc, '"');
+
+  for(state = 0, end = 0; end == 0 && ret == 0;)
   {
-    line = JSON_object_line_decode(inObject, &buff, &len);
-
-    if(line != NULL)
+    if(ps == NULL)
     {
-      if(len > 0)
-      {
-	ret = JSON_object_header_decode(inObject, line);
+      buff->idx = buff->len;
 
-	if(ret != JSON_RC_OK)
-	{
-	  SUCESO2("ERROR: JSON_object_header_decode(%s) = %d", line, ret);
-	}
+      ps = (char*)(buff->data + buff->idx);
+
+      while(*pc==' ' || *pc=='\t' || *pc=='\r' || *pc=='\n') pc++;
+
+      if(pc != ps)
+      {
+        SUCESO2("ERROR: Decode string (%s%s)", pi, pi ? pi : "");
+
+        ret = JSON_RC_ERROR;
       }
 
-      else // if(len == 0)
+      else if(buff->len < buff->type->size)
       {
-	inObject->decodeState = JSON_DECODE_STATE_BODY;
-      }
-    }
-
-    else if(len < 0)
-    {
-      SUCESO4("ERROR: JSON_object_line_decode(%p:%ld:%ld) = %ld",
-	       buff,
-	       buff->idx, 
-	       buff->len, len);
-
-      ret = JSON_RC_ERROR;
-    }
-
-    else { ret = JSON_RC_INCOMPLETE; }
-  }
-
-//---------------- MESSAGE BODY
-
-  if(inObject->decodeState == JSON_DECODE_STATE_BODY)
-  {
-    if(buff->idx >= g_BufferSize[buff->type])
-    {
-      if(buff->next != NULL) buff = buff->next;
-    }
-
-    if(inObject->contentLength == 0)
-    {
-      inObject->decodeState = JSON_DECODE_STATE_SUCCESS;
-    }
-
-    else if(inObject->contentLength > 0)
-    {
-      contentLength  = inObject->contentLength;
-      contentLength -= buff->len - buff->idx;
-
-      if(contentLength <= 0)
-      {
-	inObject->bodyRaw[0] = buff->data + buff->idx;
-	inObject->bodyLen[0] = inObject->contentLength;
-
-	buff->idx += inObject->contentLength;
-
-	inObject->decodeState = JSON_DECODE_STATE_SUCCESS;
-      }
-
-      else if(buff->len < g_BufferSize[buff->type])
-      {
-	ret = JSON_RC_INCOMPLETE;
+    	ret = JSON_RC_INCOMPLETE;
       }
 
       else if(buff->next == NULL)
       {
-	ret = JSON_RC_INCOMPLETE;
+    	ret = JSON_RC_INCOMPLETE;
       }
 
-      else if(contentLength > buff->next->len)
+      else if(buff->next->len == 0)
       {
-	ret = JSON_RC_INCOMPLETE;
+    	ret = JSON_RC_INCOMPLETE;
       }
 
-      else
+      else // if(buff->next->len > 0)
       {
-	JSON_burefs_add(inObject->burefs, buff->next);
+    	buff = buff->next; BUFF_refs_add(inObject->buffRefs, buff);
 
-	inObject->bodyRaw[0] = buff->data + buff->idx;
-	inObject->bodyLen[0] = inObject->contentLength - contentLength;
+    	pi = (char*)(buff->data + 0); // buff->idx);
 
-	buff->idx += g_BufferSize[buff->type]; buff = buff->next; 
+    	pc = pi; pc[buff->len] = 0;
 
-	inObject->bodyRaw[1] = buff->data;
-	inObject->bodyLen[1] = contentLength;
-
-	buff->idx += inObject->bodyLen[1];
-
-	inObject->decodeState = JSON_DECODE_STATE_SUCCESS;
+    	ps = strchr(pc, '{');
       }
     }
 
-    else if(inObject->remoteTrns == JSON_TRANSPORT_UDP)
+    else // if(ps != NULL)
     {
-      inObject->contentLength = buff->len - buff->idx;
+      buff->idx = ps - pc + 1; pc = ps + 1; *ps = 0;
 
-      inObject->bodyRaw[0] = buff->data + buff->idx;
-      inObject->bodyLen[0] = inObject->contentLength;
-
-      buff->idx += inObject->contentLength;
-
-      inObject->decodeState = JSON_DECODE_STATE_SUCCESS;
-    }
-
-    else // if(inObject->contentLength == 0)
-    {
-      SUCESO3("ERROR: Header Content-Length not found(%d:%s)(%s)",
-	       inObject->type,
-	       JSON_method[inObject->method],
-	       inObject->callId);
-
-      ret = JSON_RC_ERROR;
+      inObject->decodeState = JSON_DECODE_STATE_PAIR;
     }
   }
 
 //----------------
 
-  if(inObject->decodeState == JSON_DECODE_STATE_SUCCESS)
+  while((inObject->decodeState == JSON_DECODE_STATE_PAIR ||
+	     inObject->decodeState == JSON_DECODE_STATE_VALUE) && ret == JSON_RC_OK)
   {
-    if(TRACE_level_get(TRACE_TYPE_DEFAULT) >= 3)
-    {
-      if(inObject->bodyLen[0] > 0)
-      {
-	sep = inObject->bodyRaw[0][inObject->bodyLen[0]];
+	if(inObject->decodeState == JSON_DECODE_STATE_PAIR && ret == JSON_RC_OK)
+	{
+	  ps = strchr(pc, '"');
 
-	inObject->bodyRaw[0][inObject->bodyLen[0]] = 0;
+	  for(state = 0, end = 0; end == 0 && ret == 0;)
+	  {
+	    if(state == 0)
+	    {
+	      if(ps != NULL)
+	      {
+	    	while(*pc==' ' || *pc=='\t' || *pc=='\r' || *pc=='\n') pc++;
 
-	DEPURA2("BODY: (0:%05ld)\n\n%s\n", 
-		 inObject->bodyLen[0],
-		 inObject->bodyRaw[0]);
+	    	if(pc == ps)
+	    	{
+	    	  pc = ps + 1; state = 1;
 
-	inObject->bodyRaw[0][inObject->bodyLen[0]] = sep;
-      }
+	    	  ps = strpbrk(pc, "\\\"");
+	    	}
 
-      if(inObject->bodyLen[1] > 0)
-      {
-	sep = inObject->bodyRaw[1][inObject->bodyLen[1]];
+	    	else // if(pc != ps)
+	    	{
+              SUCESO2("ERROR: Decode error (%s%s)", pi, pi ? pi : "");
 
-	inObject->bodyRaw[1][inObject->bodyLen[1]] = 0;
+              ret = JSON_RC_ERROR;
+	    	}
+	      }
 
-	DEPURA2("BODY: (1:%05ld)\n\n%s\n", 
-		 inObject->bodyLen[1],
-		 inObject->bodyRaw[1]);
+	      else // if(*ps == '/')
+	      {
+            while(*pc==' ' || *pc=='\t' || *pc=='\r' || *pc=='\n') pc++;
+	      }
+	    }
 
-	inObject->bodyRaw[1][inObject->bodyLen[1]] = sep;
-      }
-    }
+	  }
+	}
+
+	if(inObject->decodeState == JSON_DECODE_STATE_VALUE && ret == JSON_RC_OK)
+	{
+
+	}
   }
-
 //----------------
 
-  TRAZA1("Returning from JSON_object_decode() = %d", ret);
+  TRAZA1("Returning from JSON_string_decode() = %d", ret);
 
   return ret;
 }

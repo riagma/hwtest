@@ -87,31 +87,46 @@ extern const char*			BUFF_RC[];
 
 //----------------
 
-typedef struct BUFF_data_tag		BUFF_data_t;
-typedef struct BUFF_refs_tag		BUFF_refs_t;
+typedef struct BUFF_part_tag		BUFF_part_t;
+typedef struct BUFF_elem_tag		BUFF_elem_t;
+typedef struct BUFF_buff_tag		BUFF_buff_t;
 typedef struct BUFF_memo_tag		BUFF_memo_t;
 
 //----------------
 
-struct BUFF_data_tag
+struct BUFF_part_tag
 {
   unsigned char*		data;
-  int					refs;
+  long					size;
 
   long					idx;
   long					len;
 
-  BUFF_data_t*			next;
-  BUFF_data_t*			prev;
-
-  BUFF_memo_t*			type;
+  int					refs;
   MEMO_element_t		memo;
 };
 
-struct BUFF_refs_tag
+struct BUFF_elem_tag
 {
-  BUFF_data_t*			refs;
-  BUFF_refs_t*			next;
+  BUFF_part_t*			part;
+  BUFF_elem_t*			next;
+  BUFF_elem_t*			prev;
+
+  MEMO_element_t		memo;
+};
+
+struct BUFF_buff_tag
+{
+  BUFF_elem_t*			head;
+  BUFF_elem_t*			tail;
+
+  BUFF_elem_t*			org;
+  long					len;
+
+  BUFF_elem_t*			idx;
+  long					off;
+
+  BUFF_memo_t*			type;
   MEMO_element_t		memo;
 };
 
@@ -148,22 +163,14 @@ int BUFF_memo_cmp(void* inVoidA, void* inVoidB);
 
 //----------------
 
-BUFF_data_t* BUFF_data_new(BUFF_memo_t* inBuffMemo);
-void BUFF_data_delete(BUFF_data_t* inBuffData);
-
-BUFF_data_t* BUFF_data_add(BUFF_data_t* inBuffData);
+BUFF_buff_t* BUFF_buff_new(BUFF_memo_t* inBuffMemo);
+void BUFF_buff_delete(BUFF_buff_t* inBuffBuff);
 
 //----------------
 
-BUFF_refs_t* BUFF_refs_new(void);
-
-void BUFF_refs_delete(BUFF_refs_t* inBuffRefs);
-
-void BUFF_refs_add
-(
-  BUFF_refs_t* 		inBuffRefs,
-  BUFF_data_t* 		inBuffData
-);
+BUFF_part_t* BUFF_part_new(BUFF_buff_t* inBuffBuff);
+void BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
+BUFF_part_t* BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
 
 //----------------
 

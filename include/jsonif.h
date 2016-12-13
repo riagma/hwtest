@@ -164,7 +164,7 @@ struct JSON_pair_tag
 
 struct JSON_object_tag
 {
-  BUFF_refs_t*			buffRefs;
+  BUFF_buff_t			buffRefs[1];
 
   RLST_reflist_t		pairList[1];
   RFTR_reftree_t		pairTree[1];
@@ -215,7 +215,7 @@ void JSON_object_delete(JSON_object_t* inObject);
 int JSON_object_decode
 (
   JSON_object_t*		inObject,
-  BUFF_data_t*			inBuffer
+  BUFF_buff_t*			inBuffer
 );
 
 int JSON_object_encode(JSON_object_t* inObject);
