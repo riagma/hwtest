@@ -97,12 +97,12 @@ typedef struct BUFF_memo_tag		BUFF_memo_t;
 struct BUFF_part_tag
 {
   unsigned char*		data;
-  long					size;
 
   long					idx;
   long					len;
 
   int					refs;
+  BUFF_memo_t*			type;
   MEMO_element_t		memo;
 };
 
@@ -120,11 +120,17 @@ struct BUFF_buff_tag
   BUFF_elem_t*			head;
   BUFF_elem_t*			tail;
 
-  BUFF_elem_t*			org;
-  long					len;
+  BUFF_elem_t*			idxElm;
+  long					idxOff;
+  long					idxLen;
 
-  BUFF_elem_t*			idx;
-  long					off;
+  BUFF_elem_t*			pc1Elm;
+  long					pc1Off;
+
+  BUFF_elem_t*			pc2Elm;
+  long					pc2Off;
+
+  long					pcsLen;
 
   BUFF_memo_t*			type;
   MEMO_element_t		memo;
@@ -171,6 +177,10 @@ void BUFF_buff_delete(BUFF_buff_t* inBuffBuff);
 BUFF_part_t* BUFF_part_new(BUFF_buff_t* inBuffBuff);
 void BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
 BUFF_part_t* BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
+
+//----------------
+
+char* BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars);
 
 //----------------
 
