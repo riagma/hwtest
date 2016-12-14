@@ -615,7 +615,7 @@ JSON_object_decode
 	    {
 	      if(ps != NULL)
 	      {
-		    if(BUFF_chrchk(inBuffer, " \t\r\n") == BUFF_TRUE)
+		    if(BUFF_strspn(inBuffer, " \t\r\n") == BUFF_TRUE)
 		    {
               inBuffer->pc1Elm = inBuffer->pc2Elm;
               inBuffer->pc1Off = inBuffer->pc2Off + 1;
@@ -625,7 +625,7 @@ JSON_object_decode
               state = 1;
 		    }
 
-		    else // if(BUFF_chrchk(inBuffer, " \t\r\n") == BUFF_FALSE)
+		    else // if(BUFF_strspn(inBuffer, " \t\r\n") == BUFF_FALSE)
 	    	{
 		      pc = inBuffer->idxElm->part->data + inBuffer->idxOff;
 
@@ -645,28 +645,6 @@ JSON_object_decode
         {
 	      if(ps != NULL)
 	      {
-
-		    if(BUFF_chrchk(inBuffer, " \t\r\n") == BUFF_TRUE)
-		    {
-              inBuffer->pc1Elm = inBuffer->pc2Elm;
-              inBuffer->pc1Off = inBuffer->pc2Off + 1;
-
-              ps = BUFF_strchr(inBuffer, "\"");
-
-              state = 1;
-		    }
-
-		    else // if(BUFF_chrchk(inBuffer, " \t\r\n") == BUFF_FALSE)
-	    	{
-		      pc = inBuffer->idxElm->part->data + inBuffer->idxOff;
-
-              SUCESO1("ERROR: Decode object (%s)", pc);
-
-		      inBuffer->idxElm = inBuffer->pc2Elm;
-		      inBuffer->idxOff = inBuffer->pc2Off + 1;
-
-              ret = JSON_RC_ERROR;
-	    	}
 	      }
 
 	      else { ret = JSON_RC_INCOMPLETE; }

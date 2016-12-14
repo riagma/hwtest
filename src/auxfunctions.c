@@ -29,8 +29,6 @@ ____________________________________________________________________________*/
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
-//#include <netdb.h>
-//#include <pwd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,27 +37,28 @@ ____________________________________________________________________________*/
 #include <time.h>
 #include <unistd.h>
 
-//#include <arpa/inet.h>
-//#include <net/if.h>
 
-//#include <sys/ipc.h>
-//#include <sys/ioctl.h>
-//#include <sys/socket.h>
-//#include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 
 #include <sys/param.h>
 #include <sys/stat.h>
-//#include <sys/times.h>
 #include <sys/types.h>
-//#include <sys/wait.h>
 
 #ifdef __linux__ 
 #include <dirent.h>
 #include <semaphore.h>
-#include <socket.h>
+#include <netdb.h>
+#include <pwd.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <sys/ipc.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/shm.h>
+#include <sys/times.h>
+#include <sys/wait.h>
 #endif
 
 #ifdef _WIN64

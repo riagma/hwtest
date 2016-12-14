@@ -538,8 +538,76 @@ BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars)
 
 /*----------------------------------------------------------------------------*/
 
-int
-BUFF_chrchk(BUFF_buff_t* inBuffer, const char* inChars)
+char*
+BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
+{
+  BUFF_elem_t* 		elm = inBuffer->pc1Elm;
+  long				off = inBuffer->pc1Off;
+  long				len = 0;
+  long				spn = 0;
+  long				max = 0;
+
+  char*				pc;
+  char*				ps;
+
+  int				end = BUFF_FALSE;
+
+  TRAZA2("Entering in BUFF_strspn(%p, %s)", inBuffer, inChars);
+
+//----------------
+
+  pc = (char*)(elm->part->data + off);
+
+  while(end == BUFF_FALSE)
+  {
+	if(*pc != 0)
+	{
+      spn = strspn(pc, inChars); off += spn;
+
+      if(off < elm->part->type->size)
+      {
+
+      }
+	}
+
+    else if(elm->part->len < elm->part->type->size)
+    {
+      end = BUFF_TRUE;
+    }
+
+    else if(elm->next == NULL)
+    {
+      end = BUFF_TRUE;
+    }
+
+    else if(elm->next->part->len == 0)
+    {
+      end = BUFF_TRUE;
+    }
+
+    else // if(elm->next->part->len > 0)
+    {
+      elm = elm->next; off = 0;
+
+	  pc = (char*)(elm->part->data);
+    }
+  }
+
+  inBuffer->pc2Elm = elm;
+  inBuffer->pc2Off = off;
+  inBuffer->pcsLen = len;
+
+//----------------
+
+  TRAZA1("Returning from BUFF_strspn() = %p", ps);
+
+  return ps;
+}
+
+/*----------------------------------------------------------------------------*/
+
+char*
+BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
 {
   BUFF_elem_t* 		elem = inBuffer->pc1Elm;
 
@@ -551,7 +619,7 @@ BUFF_chrchk(BUFF_buff_t* inBuffer, const char* inChars)
 
   int				check = BUFF_TRUE;
 
-  TRAZA2("Entering in BUFF_chrchk(%p, %s)", inBuffer, inChars);
+  TRAZA2("Entering in BUFF_strspn(%p, %s)", inBuffer, inChars);
 
 //----------------
 
@@ -599,7 +667,38 @@ BUFF_chrchk(BUFF_buff_t* inBuffer, const char* inChars)
 
 //----------------
 
-  TRAZA1("Returning from BUFF_chrchk() = %p", pc);
+  TRAZA1("Returning from BUFF_strspn() = %p", pc);
+
+  return pc;
+}
+
+/*----------------------------------------------------------------------------*/
+
+char*
+BUFF_strfix(BUFF_buff_t* inBuffer, BUFF_buff_t* inAuxBuff)
+{
+  BUFF_elem_t* 		elem = inBuffer->pc1Elm;
+
+  char*				pc;
+  char*				ps;
+
+  long				off = inBuffer->pc1Off;
+  long				len = inBuffer->pcsLen;
+
+  int				check = BUFF_TRUE;
+
+  TRAZA2("Entering in BUFF_strfix(%p, %p)", inBuffer, inAuxBuff);
+
+//----------------
+
+  if(inBuffer->pc1Elm == inBuffer->pc2Elm)
+  {
+    pc = (char*)(inBuffer->pc1Elm->part->data + inBuffer->pc1Off);
+  }
+
+//----------------
+
+  TRAZA1("Returning from BUFF_strfix() = %p", pc);
 
   return pc;
 }
