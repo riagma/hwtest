@@ -182,6 +182,8 @@ BUFF_part_t* BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
 
 char* BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars);
 
+int BUFF_chrchk(BUFF_buff_t* inBuffer, const char* inChars);
+
 //----------------
 
 /*__FUNCIONES PRIVADAS________________________________________________________*/
