@@ -83,6 +83,9 @@ const char* JSON_RC[] =
 
 static int					JSON_Init_s = 0;
 
+static BUFF_memo_t*			JSON_BuffMemo_s = NULL;
+static BUFF_buff_t*			JSON_BuffRefs_s = NULL;
+
 static MEMO_refmemo_t*		JSON_MapMemo_s = 0;
 static long					JSON_MapUsed_s = 0;
 static long					JSON_MapMark_s = 0;
@@ -127,6 +130,10 @@ JSON_initialize(void)
   if(JSON_Init_s == JSON_FALSE)
   {
 	JSON_Init_s = JSON_TRUE;
+
+	JSON_BuffMemo_s = BUFF_memo_new(64 * 1024, 32, 2);
+
+	JSON_BuffRefs_s = BUFF_buff_new(JSON_BuffMemo_s);
 
 	JSON_MapMemo_s = MEMO_createRefMemo(&m, &m.memo, sizeof(m), 128, 2);
 
@@ -519,15 +526,11 @@ JSON_object_decode
   BUFF_buff_t*			inBuffer
 )
 {
-  char*					pc;
-  char*					pa;
-
   JSON_pair_t*			pair;
 
-  int					state;
+  char*					pc;
+  char					sep;
 
-  int					brk = JSON_FALSE;
-  int					end = JSON_FALSE;
   int					ret = JSON_RC_OK;
 
   TRAZA2("Entering in JSON_object_decode(%p, %p)", inObject, inBuffer);
@@ -545,6 +548,7 @@ JSON_object_decode
     {
       inBuffer->idxElm = inBuffer->tail;
       inBuffer->idxOff = inBuffer->tail->part->len;
+      inBuffer->idxLen = 0;
 
       ret = JSON_RC_INCOMPLETE;
     }
@@ -553,6 +557,7 @@ JSON_object_decode
     {
       inBuffer->idxElm = inBuffer->pc2Elm;
       inBuffer->idxOff = inBuffer->pc2Off + 1;
+      inBuffer->idxLen = inBuffer->pcsLen + 1;
 
       inObject->decodeState = JSON_DECODE_STATE_PAIR;
     }
@@ -561,6 +566,7 @@ JSON_object_decode
     {
       inBuffer->idxElm = inBuffer->pc2Elm;
       inBuffer->idxOff = inBuffer->pc2Off + 1;
+      inBuffer->idxLen = inBuffer->pcsLen + 1;
 
       ret = JSON_RC_ERROR;
     }
@@ -573,76 +579,26 @@ JSON_object_decode
   {
 	if(inObject->decodeState == JSON_DECODE_STATE_PAIR)
 	{
-      inBuffer->pc1Elm = inBuffer->idxElm;
-      inBuffer->pc1Off = inBuffer->idxOff;
+      pair = JSON_pair_new();
 
-      pc = BUFF_strspn(inBuffer, " \t\r\n");
+	  ret = JSON_name_decode(inObject, inBuffer, pair);
 
-
-      pc = BUFF_strchr(inBuffer, "\"");
-
-	  for(state = 0, end = 0; end == 0 && ret == 0;)
+	  if(ret == JSON_RC_OK)
 	  {
-        if(pc == NULL)
+        if(RFTR_insert(inObject->pairTree, pair) != RFTR_RC_OK)
         {
-          ret = JSON_RC_INCOMPLETE;
+          JSON_FATAL0("FATAL: RFTR_insert()");
         }
 
-        else if(state == 0)
-	    {
-          inBuffer->pc1Elm = inBuffer->pc2Elm;
-          inBuffer->pc1Off = inBuffer->pc2Off + 1;
-
-          pc = BUFF_strchr(inBuffer, "\\\"");
-
-          state = 1;
-	    }
-
-	    else if(state == 1)
+        if(RLST_insertTail(inObject->pairList, pair) != RFTR_RC_OK)
         {
-	      if(*pc == '"')
-	      {
-            inBuffer->pc1Elm = inBuffer->pc2Elm;
-            inBuffer->pc1Off = inBuffer->pc2Off + 1;
-
-            pc = BUFF_strchr(inBuffer, ":");
-
-            state = 2;
-	      }
-
-	      else // if(*pc == '\\')
-	      {
-            inBuffer->pc1Elm = inBuffer->pc2Elm;
-            inBuffer->pc1Off = inBuffer->pc2Off + 2;
-
-            pc = BUFF_strchr(inBuffer, "\\\"");
-
-            state = 1;
-	      }
+          JSON_FATAL0("FATAL: RLST_insertTail()");
         }
 
-        else if(state == 2)
-	    {
-          pair = JSON_pair_new(); pair->value = JSON_value_new();
-
-          if(RFTR_insert(inObject->pairTree, pair) != RFTR_RC_OK)
-          {
-            JSON_FATAL0("FATAL: RFTR_insert()");
-          }
-
-          if(RLST_insertTail(inObject->pairList, pair) != RFTR_RC_OK)
-          {
-            JSON_FATAL0("FATAL: RLST_insertTail()");
-          }
-
-          inBuffer->idxElm = inBuffer->pc2Elm;
-          inBuffer->idxOff = inBuffer->pc2Off + 1;
-
-          inObject->decodeState = JSON_DECODE_STATE_PAIR;
-
-          end = JSON_TRUE;
-	    }
+        inObject->decodeState = JSON_DECODE_STATE_VALUE;
 	  }
+
+	  else { JSON_pair_delete(pair); }
 	}
 
 //----------------
@@ -656,62 +612,33 @@ JSON_object_decode
 		JSON_FATAL0("FATAL: ASSERTION!!");
 	  }
 
-	  if(pair->value->type == JSON_VALUE_NONE)
+	  if(pair->value == NULL)
 	  {
-        inBuffer->pc1Elm = inBuffer->idxElm;
-        inBuffer->pc1Off = inBuffer->idxOff;
-
-		pc = BUFF_strspn(inBuffer, " \t\r\n");
-
-		if(pc == NULL)
-		{
-		  ret = JSON_RC_INCOMPLETE;
-		}
-
-		else if(*pc == '{')
-		{
-		  pair->value->type = JSON_VALUE_OBJECT;
-		}
-
-		else if(*pc == '[')
-		{
-		  pair->value->type = JSON_VALUE_ARRAY;
-		}
-
-		else if(*pc == '"')
-		{
-		  pair->value->type = JSON_VALUE_STRING;
-		}
-
-		else if(*pc == '-' || isdigit(*pc))
-		{
-		  pair->value->type = JSON_VALUE_OBJECT;
-		}
-
-		else if(*pc == 't' || *pc == 'T')
-		{
-		  pair->value->type = JSON_VALUE_TRUE;
-		}
-
-		else if(*pc == 'f' || *pc == 'F')
-		{
-		  pair->value->type = JSON_VALUE_FALSE;
-		}
-
-		else if(*pc == 'n' || *pc == 'N')
-		{
-		  pair->value->type = JSON_VALUE_NULL;
-		}
+		pair->value = JSON_value_new();
 	  }
 
-	  if(pair->value->type == JSON_VALUE_OBJECT)
-	  {
-		ret = JSON_object_decode(inObject, inBuffer);
-	  }
+	  ret = JSON_value_decode(inObject, inBuffer, pair, &sep);
 
-	  else if(pair->value->type == JSON_VALUE_ARRAY)
+	  if(ret == JSON_RC_OK)
 	  {
-		ret = JSON_array_decode(inObject, inBuffer);
+		if(sep == ',')
+		{
+	      inObject->decodeState = JSON_DECODE_STATE_PAIR;
+		}
+
+		else if(sep == '}')
+		{
+	      inObject->decodeState = JSON_DECODE_STATE_SUCCESS;
+		}
+
+	    else // if(sep != ',}')
+	    {
+	      inBuffer->idxElm = inBuffer->pc2Elm;
+	      inBuffer->idxOff = inBuffer->pc2Off + 1;
+	      inBuffer->idxLen = inBuffer->pcsLen + 1;
+
+	      ret = JSON_RC_ERROR;
+	    }
 	  }
 	}
   }
@@ -724,17 +651,391 @@ JSON_object_decode
 }
 
 /*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int
+JSON_name_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_pair_t*			inPair
+)
+{
+  char*					pc;
+
+  int					state;
+
+  int					end = JSON_FALSE;
+  int					ret = JSON_RC_OK;
+
+  TRAZA3("Entering in JSON_name_decode(%p, %p, %p)",
+	      inObject,
+		  inBuffer,
+		  inPair);
+
+//----------------
+
+  inBuffer->pc1Elm = inBuffer->idxElm;
+  inBuffer->pc1Off = inBuffer->idxOff;
+
+  pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+  if(pc == NULL)
+  {
+    inBuffer->idxElm = inBuffer->tail;
+    inBuffer->idxOff = inBuffer->tail->part->len;
+
+    ret = JSON_RC_INCOMPLETE;
+  }
+
+  else if(*pc == '"')
+  {
+    inBuffer->pc1Elm = inBuffer->pc2Elm;
+    inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+    inObject->decodeState = JSON_DECODE_STATE_PAIR;
+  }
+
+  else // if(*pc != '"')
+  {
+    inBuffer->idxElm = inBuffer->pc2Elm;
+    inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+    ret = JSON_RC_ERROR;
+  }
+
+//----------------
+
+  for(state = 0, end = 0; end == 0 && ret == 0;)
+  {
+    pc = BUFF_strchr(inBuffer, "\\\"");
+
+    if(pc == NULL)
+    {
+      ret = JSON_RC_INCOMPLETE;
+    }
+
+    else if(state == 0)
+    {
+      if(*pc == '"')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+        pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+        state = 1;
+      }
+
+      else // if(*pc == '\\')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 2;
+
+        pc = BUFF_strchr(inBuffer, "\\\"");
+
+        state = 0;
+      }
+    }
+
+    else if(state == 1)
+    {
+      if(pc == NULL)
+      {
+        inBuffer->idxElm = inBuffer->tail;
+        inBuffer->idxOff = inBuffer->tail->part->len;
+
+        ret = JSON_RC_INCOMPLETE;
+      }
+
+      else if(*pc == ':')
+      {
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+     	end = JSON_TRUE;
+      }
+
+      else
+      {
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+        ret = JSON_RC_ERROR;
+      }
+    }
+  }
+
+//----------------
+
+  TRAZA1("Returning from JSON_name_decode() = %d", ret);
+
+  return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int
+JSON_value_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_pair_t*			inPair,
+  char*					outSep
+)
+{
+  char*					pc;
+
+  int					ret = JSON_RC_OK;
+
+  TRAZA4("Entering in JSON_value_decode(%p, %p, %p, %p)",
+	      inObject,
+		  inBuffer,
+		  inPair,
+		  outSep);
+
+//----------------
+
+  if(inPair->value->type == JSON_VALUE_NONE)
+  {
+    inBuffer->pc1Elm = inBuffer->idxElm;
+    inBuffer->pc1Off = inBuffer->idxOff;
+
+	pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+	if(pc == NULL)
+	{
+	  ret = JSON_RC_INCOMPLETE;
+	}
+
+	else if(*pc == '{')
+	{
+	  inPair->value->type = JSON_VALUE_OBJECT;
+
+	  ret = JSON_object_decode(inObject, inBuffer);
+	}
+
+	else if(*pc == '[')
+	{
+	  inPair->value->type = JSON_VALUE_ARRAY;
+	}
+
+	else if(*pc == '"')
+	{
+	  inPair->value->type = JSON_VALUE_STRING;
+	}
+
+	else if(*pc == '-' || isdigit(*pc))
+	{
+	  inPair->value->type = JSON_VALUE_NUMBER;
+	}
+
+	else if(*pc == 't' || *pc == 'T')
+	{
+	  inPair->value->type = JSON_VALUE_TRUE;
+	}
+
+	else if(*pc == 'f' || *pc == 'F')
+	{
+	  inPair->value->type = JSON_VALUE_FALSE;
+	}
+
+	else if(*pc == 'n' || *pc == 'N')
+	{
+	  inPair->value->type = JSON_VALUE_NULL;
+	}
+  }
+
+//----------------
+
+  if(inPair->value->type == JSON_VALUE_OBJECT)
+  {
+	ret = JSON_object_decode(inObject, inBuffer);
+
+	if(ret == JSON_RC_OK)
+	{
+      inBuffer->pc1Elm = inBuffer->idxElm;
+      inBuffer->pc1Off = inBuffer->idxOff;
+
+	  pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+	  if(pc == NULL)
+	  {
+	    ret = JSON_RC_INCOMPLETE;
+	  }
+
+	  else // if(pc != NULL)
+	  {
+	    inBuffer->idxElm = inBuffer->pc2Elm;
+	    inBuffer->idxOff = inBuffer->pc2Off + 1; *outSep = *pc;
+	  }
+	}
+  }
+
+  else if(inPair->value->type == JSON_VALUE_ARRAY)
+  {
+	ret = JSON_array_decode(inObject, inBuffer, inPair->value, outSep);
+  }
+
+  else if(inPair->value->type == JSON_VALUE_STRING)
+  {
+	ret = JSON_string_decode(inObject, inBuffer, inPair->value, outSep);
+  }
+
+  else if(inPair->value->type == JSON_VALUE_NUMBER)
+  {
+	ret = JSON_number_decode(inObject, inBuffer, inPair->value, outSep);
+  }
+
+  else if(inPair->value->type != JSON_VALUE_NONE)
+  {
+	ret = JSON_literal_decode(inObject, inBuffer, inPair->value, outSep);
+  }
+
+//----------------
+
+  TRAZA1("Returning from JSON_value_decode() = %d", ret);
+
+  return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+int
+JSON_array_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
+  char*					outSep
+)
+{
+  char*					pc;
+
+  int					state;
+
+  int					end = JSON_FALSE;
+  int					ret = JSON_RC_OK;
+
+  TRAZA3("Entering in JSON_array_decode(%p, %p, %p)",
+	      inObject,
+		  inBuffer,
+		  outSep);
+
+//----------------
+
+  inBuffer->pc1Elm = inBuffer->idxElm;
+  inBuffer->pc1Off = inBuffer->idxOff;
+
+  pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+  if(pc == NULL)
+  {
+    inBuffer->idxElm = inBuffer->tail;
+    inBuffer->idxOff = inBuffer->tail->part->len;
+
+    ret = JSON_RC_INCOMPLETE;
+  }
+
+  else if(*pc == '"')
+  {
+    inBuffer->pc1Elm = inBuffer->pc2Elm;
+    inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+    inObject->decodeState = JSON_DECODE_STATE_PAIR;
+  }
+
+  else // if(*pc != '"')
+  {
+    inBuffer->idxElm = inBuffer->pc2Elm;
+    inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+    ret = JSON_RC_ERROR;
+  }
+
+//----------------
+
+  for(state = 0, end = 0; end == 0 && ret == 0;)
+  {
+    pc = BUFF_strchr(inBuffer, "\\\"");
+
+    if(pc == NULL)
+    {
+      ret = JSON_RC_INCOMPLETE;
+    }
+
+    else if(state == 0)
+    {
+      if(*pc == '"')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+        pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+        state = 1;
+      }
+
+      else // if(*pc == '\\')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 2;
+
+        pc = BUFF_strchr(inBuffer, "\\\"");
+
+        state = 0;
+      }
+    }
+
+    else if(state == 1)
+    {
+      if(pc == NULL)
+      {
+        inBuffer->idxElm = inBuffer->tail;
+        inBuffer->idxOff = inBuffer->tail->part->len;
+
+        ret = JSON_RC_INCOMPLETE;
+      }
+
+      else if(*pc == ',' || *pc == ']' || *pc == '}')
+      {
+ 	    inValue->value = BUFF_strfix(inBuffer, JSON_BuffRefs_s);
+
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+     	end = JSON_TRUE; *outSep = *pc;
+      }
+
+      else // if(*pc != '"')
+      {
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+        ret = JSON_RC_ERROR;
+      }
+    }
+  }
+
+//----------------
+
+  TRAZA1("Returning from JSON_array_decode() = %d", ret);
+
+  return ret;
+}
+
+/*----------------------------------------------------------------------------*/
 
 int
 JSON_string_decode
 (
   JSON_object_t*		inObject,
   BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
   char*					outSep
 )
 {
-  JSON_pair_t*			pair;
-
   char*					pc;
 
   int					state;
@@ -822,23 +1123,9 @@ JSON_string_decode
         ret = JSON_RC_INCOMPLETE;
       }
 
-      else if(*pc == ':')
-      {
- 	    pair = RLST_getTail(inObject->pairList);
-
- 	    pair->value
-
-        inBuffer->idxElm = inBuffer->pc2Elm;
-        inBuffer->idxOff = inBuffer->pc2Off + 1;
-
-     	end = JSON_TRUE; *outSep = *pc;
-      }
-
       else if(*pc == ',' || *pc == ']' || *pc == '}')
       {
- 	    pair = RLST_getTail(inObject->pairList);
-
- 	    pair->value = inBuffer->pc1Elm
+ 	    inValue->value = BUFF_strfix(inBuffer, JSON_BuffRefs_s);
 
         inBuffer->idxElm = inBuffer->pc2Elm;
         inBuffer->idxOff = inBuffer->pc2Off + 1;
@@ -853,16 +1140,264 @@ JSON_string_decode
 
         ret = JSON_RC_ERROR;
       }
-
-      end = JSON_TRUE;
     }
   }
 
 //----------------
 
-  TRAZA1("Returning from JSON_string_decode() = %d", value);
+  TRAZA1("Returning from JSON_string_decode() = %d", ret);
 
-  return value;
+  return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int
+JSON_number_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
+  char*					outSep
+)
+{
+  char*					pc;
+
+  int					state;
+
+  int					end = JSON_FALSE;
+  int					ret = JSON_RC_OK;
+
+  TRAZA3("Entering in JSON_number_decode(%p, %p, %p)",
+	      inObject,
+		  inBuffer,
+		  outSep);
+
+//----------------
+
+  inBuffer->pc1Elm = inBuffer->idxElm;
+  inBuffer->pc1Off = inBuffer->idxOff;
+
+  pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+  if(pc == NULL)
+  {
+    inBuffer->idxElm = inBuffer->tail;
+    inBuffer->idxOff = inBuffer->tail->part->len;
+
+    ret = JSON_RC_INCOMPLETE;
+  }
+
+  else if(*pc == '"')
+  {
+    inBuffer->pc1Elm = inBuffer->pc2Elm;
+    inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+    inObject->decodeState = JSON_DECODE_STATE_PAIR;
+  }
+
+  else // if(*pc != '"')
+  {
+    inBuffer->idxElm = inBuffer->pc2Elm;
+    inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+    ret = JSON_RC_ERROR;
+  }
+
+//----------------
+
+  for(state = 0, end = 0; end == 0 && ret == 0;)
+  {
+    pc = BUFF_strchr(inBuffer, "\\\"");
+
+    if(pc == NULL)
+    {
+      ret = JSON_RC_INCOMPLETE;
+    }
+
+    else if(state == 0)
+    {
+      if(*pc == '"')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+        pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+        state = 1;
+      }
+
+      else // if(*pc == '\\')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 2;
+
+        pc = BUFF_strchr(inBuffer, "\\\"");
+
+        state = 0;
+      }
+    }
+
+    else if(state == 1)
+    {
+      if(pc == NULL)
+      {
+        inBuffer->idxElm = inBuffer->tail;
+        inBuffer->idxOff = inBuffer->tail->part->len;
+
+        ret = JSON_RC_INCOMPLETE;
+      }
+
+      else if(*pc == ',' || *pc == ']' || *pc == '}')
+      {
+ 	    inValue->value = BUFF_strfix(inBuffer, JSON_BuffRefs_s);
+
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+     	end = JSON_TRUE; *outSep = *pc;
+      }
+
+      else // if(*pc != '"')
+      {
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+        ret = JSON_RC_ERROR;
+      }
+    }
+  }
+
+//----------------
+
+  TRAZA1("Returning from JSON_number_decode() = %d", ret);
+
+  return ret;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int
+JSON_literal_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
+  char*					outSep
+)
+{
+  char*					pc;
+
+  int					state;
+
+  int					end = JSON_FALSE;
+  int					ret = JSON_RC_OK;
+
+  TRAZA3("Entering in JSON_literal_decode(%p, %p, %p)",
+	      inObject,
+		  inBuffer,
+		  outSep);
+
+//----------------
+
+  inBuffer->pc1Elm = inBuffer->idxElm;
+  inBuffer->pc1Off = inBuffer->idxOff;
+
+  pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+  if(pc == NULL)
+  {
+    inBuffer->idxElm = inBuffer->tail;
+    inBuffer->idxOff = inBuffer->tail->part->len;
+
+    ret = JSON_RC_INCOMPLETE;
+  }
+
+  else if(*pc == '"')
+  {
+    inBuffer->pc1Elm = inBuffer->pc2Elm;
+    inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+    inObject->decodeState = JSON_DECODE_STATE_PAIR;
+  }
+
+  else // if(*pc != '"')
+  {
+    inBuffer->idxElm = inBuffer->pc2Elm;
+    inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+    ret = JSON_RC_ERROR;
+  }
+
+//----------------
+
+  for(state = 0, end = 0; end == 0 && ret == 0;)
+  {
+    pc = BUFF_strchr(inBuffer, "\\\"");
+
+    if(pc == NULL)
+    {
+      ret = JSON_RC_INCOMPLETE;
+    }
+
+    else if(state == 0)
+    {
+      if(*pc == '"')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 1;
+
+        pc = BUFF_strspn(inBuffer, " \t\r\n");
+
+        state = 1;
+      }
+
+      else // if(*pc == '\\')
+      {
+        inBuffer->pc1Elm = inBuffer->pc2Elm;
+        inBuffer->pc1Off = inBuffer->pc2Off + 2;
+
+        pc = BUFF_strchr(inBuffer, "\\\"");
+
+        state = 0;
+      }
+    }
+
+    else if(state == 1)
+    {
+      if(pc == NULL)
+      {
+        inBuffer->idxElm = inBuffer->tail;
+        inBuffer->idxOff = inBuffer->tail->part->len;
+
+        ret = JSON_RC_INCOMPLETE;
+      }
+
+      else if(*pc == ',' || *pc == ']' || *pc == '}')
+      {
+ 	    inValue->value = BUFF_strfix(inBuffer, JSON_BuffRefs_s);
+
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+     	end = JSON_TRUE; *outSep = *pc;
+      }
+
+      else // if(*pc != '"')
+      {
+        inBuffer->idxElm = inBuffer->pc2Elm;
+        inBuffer->idxOff = inBuffer->pc2Off + 1;
+
+        ret = JSON_RC_ERROR;
+      }
+    }
+  }
+
+//----------------
+
+  TRAZA1("Returning from JSON_literal_decode() = %d", ret);
+
+  return ret;
 }
 
 /*----------------------------------------------------------------------------*/

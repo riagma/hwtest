@@ -19,8 +19,10 @@ ______________________________________________________________________________*/
 
 /*__INCLUDES DEL SISTEMA______________________________________________________*/
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*__INCLUDES DE LA BD_________________________________________________________*/
 
@@ -644,13 +646,9 @@ RLST_getHead(RLST_reflist_t* inPtrRefList)
 
   RLST_element_t*	ptrElement;
 
-  RLST_reflist_t*	ptrRefList;
-
   TRAZA1("Entering in RLST_getHead(%p)", inPtrRefList);
 
 /*----------*/
-
-  ptrRefList = inPtrRefList;
 
   ptrElement = inPtrRefList->head;
 
@@ -679,13 +677,9 @@ RLST_getTail(RLST_reflist_t* inPtrRefList)
 
   RLST_element_t*	ptrElement;
 
-  RLST_reflist_t*	ptrRefList;
-
   TRAZA1("Entering in RLST_getTail(%p)", inPtrRefList);
 
 /*----------*/
-
-  ptrRefList = inPtrRefList;
 
   ptrElement = inPtrRefList->tail;
 

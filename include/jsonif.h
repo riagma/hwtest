@@ -92,6 +92,7 @@ enum JSON_DECODE_STATE_e
   JSON_DECODE_STATE_PAIR,		// 01
   JSON_DECODE_STATE_VALUE,		// 02
   JSON_DECODE_STATE_SUCCESS,	// 03
+  JSON_DECODE_STATE_ERROR,		// 04
 
   JSON_DECODE_STATE_TOTAL
 };
@@ -232,6 +233,59 @@ char* JSON_object_dump
   long			        inStrLen,
   char*			        outStr
 );
+
+//----------------
+
+int JSON_name_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_pair_t*			inPair
+);
+
+int JSON_value_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_pair_t*			inPair,
+  char*					outSep
+);
+
+//----------------
+
+int JSON_array_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
+  char*					outSep
+);
+
+int JSON_string_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
+  char*					outSep
+);
+
+int JSON_number_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
+  char*					outSep
+);
+
+int JSON_literal_decode
+(
+  JSON_object_t*		inObject,
+  BUFF_buff_t*			inBuffer,
+  JSON_value_t*			inValue,
+  char*					outSep
+);
+
+//----------------
 
 /*__DEFINES___________________________________________________________________*/
 

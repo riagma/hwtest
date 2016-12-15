@@ -160,9 +160,17 @@ int BUFF_initialize(void);
 
 //----------------
 
+BUFF_memo_t* BUFF_memo_new(long inSize, long inBlen, long inBmin);
+void BUFF_memo_delete(BUFF_memo_t* inBuffMemo);
+
+int BUFF_memo_cmp(void* inVoidA, void* inVoidB);
+
+//----------------
+
 BUFF_part_t* BUFF_part_new(BUFF_buff_t* inBuffBuff);
 void BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
-BUFF_part_t* BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
+
+void BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
 
 //----------------
 
@@ -171,74 +179,13 @@ void BUFF_buff_delete(BUFF_buff_t* inBuffBuff);
 
 //----------------
 
-BUFF_memo_t* BUFF_memo_new(long inSize, long inBlen, long inBmin);
-void BUFF_memo_delete(BUFF_memo_t* inBuffMemo);
-
-int BUFF_memo_cmp(void* inVoidA, void* inVoidB);
-
-//----------------
-
 char* BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars);
 char* BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars);
-char* BUFF_strfix(BUFF_buff_t* inBuffer, BUFF_buff_t* inAuxBuff, int* outFix);
+char* BUFF_strfix(BUFF_buff_t* inBuffer, BUFF_buff_t* inAuxBuff);
 
 //----------------
 
 /*__FUNCIONES PRIVADAS________________________________________________________*/
-
-/*__FUNCIONES INLINE__________________________________________________________*/
-
-static inline char* BUFF_trim(char* s)
-{
-  char*			pc;
-  char*			pz;
-  long			l;
-
-  l = strlen(s); pc = s; pz = s + l - 1; 
-
-  while(*pc == ' ' || *pc == '\t' || *pc == '\r' || *pc == '\n')
-  {	
-    pc++;
-  }
-
-  if(pz > pc) 
-  {
-    while(*pz == ' ' || *pz == '\t' || *pz == '\r' || *pz == '\n')
-    {	
-      *pz = 0; pz--;
-    }
-  }
-  
-  return pc;
-}
-
-/*----------------------------------------------------------------------------*/
-
-static inline char* BUFF_ltrim(char* s)
-{
-  char*			pc = s;
-
-  while(*pc == ' ' || *pc == '\t' || *pc == '\r' || *pc == '\n')
-  {	
-    pc++;
-  }
-
-  return pc;
-}
-
-/*----------------------------------------------------------------------------*/
-
-static inline char* BUFF_rtrim(char* s)
-{
-  char*			pc = s;
-
-  while(*pc == ' ' || *pc == '\t' || *pc == '\r' || *pc == '\n')
-  {	
-    *pc = 0; pc--;
-  }
-
-  return pc;
-}
 
 /*__DEFINES___________________________________________________________________*/
 
