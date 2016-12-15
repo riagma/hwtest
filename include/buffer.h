@@ -126,10 +126,8 @@ struct BUFF_buff_tag
 
   BUFF_elem_t*			pc1Elm;
   long					pc1Off;
-
   BUFF_elem_t*			pc2Elm;
   long					pc2Off;
-
   long					pcsLen;
 
   BUFF_memo_t*			type;
@@ -162,10 +160,9 @@ int BUFF_initialize(void);
 
 //----------------
 
-BUFF_memo_t* BUFF_memo_new(long inSize, long inBlen, long inBmin);
-void BUFF_memo_delete(BUFF_memo_t* inBuffMemo);
-
-int BUFF_memo_cmp(void* inVoidA, void* inVoidB);
+BUFF_part_t* BUFF_part_new(BUFF_buff_t* inBuffBuff);
+void BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
+BUFF_part_t* BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
 
 //----------------
 
@@ -174,15 +171,16 @@ void BUFF_buff_delete(BUFF_buff_t* inBuffBuff);
 
 //----------------
 
-BUFF_part_t* BUFF_part_new(BUFF_buff_t* inBuffBuff);
-void BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
-BUFF_part_t* BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
+BUFF_memo_t* BUFF_memo_new(long inSize, long inBlen, long inBmin);
+void BUFF_memo_delete(BUFF_memo_t* inBuffMemo);
+
+int BUFF_memo_cmp(void* inVoidA, void* inVoidB);
 
 //----------------
 
 char* BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars);
-
-int BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars);
+char* BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars);
+char* BUFF_strfix(BUFF_buff_t* inBuffer, BUFF_buff_t* inAuxBuff, int* outFix);
 
 //----------------
 

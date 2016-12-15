@@ -195,7 +195,7 @@ BUFF_memo_new(long inSize, long inBlen, long inBmin)
 
 //----------------
 
-  size = sizeof(BUFF_part_t) + inSize + 1; size = BUFF_ALING(size);
+  size = sizeof(BUFF_part_t) + inSize + 2; size = BUFF_ALING(size);
 
   ptrBuffMemo->refm = MEMO_createRefMemo(&d, &d.memo, size, inBlen, inBmin);
 
@@ -256,10 +256,10 @@ BUFF_memo_cmp(void* inVoidA, void* inVoidB)
 /*----------------------------------------------------------------------------*/
 
 BUFF_part_t*
-BUFF_part_new(BUFF_buff_t* inBuffBuff)
+BUFF_part_new(BUFF_buff_t* inBuff)
 {
-  BUFF_part_t*			ptrBuffData = NULL;
-  BUFF_elem_t*			ptrBuffElem = NULL;
+  BUFF_part_t*			ptrPart = NULL;
+  BUFF_elem_t*			ptrElem = NULL;
 
   static size_t			offs = sizeof(BUFF_part_t);
 
@@ -267,36 +267,36 @@ BUFF_part_new(BUFF_buff_t* inBuffBuff)
 
 //----------------
 
-  ptrBuffData = (BUFF_part_t*) MEMO_new_no_ini(inBuffBuff->type->refm);
+  ptrPart = (BUFF_part_t*) MEMO_new_no_ini(inBuff->type->refm);
 
-  if(ptrBuffData == NULL)
+  if(ptrPart == NULL)
   {
     BUFF_FATAL0("MEMO_new()");
   }
 
-  inBuffBuff->type->used++;
+  inBuff->type->used++;
 
-  if(inBuffBuff->type->mark < inBuffBuff->type->used)
+  if(inBuff->type->mark < inBuff->type->used)
   {
-	inBuffBuff->type->mark = inBuffBuff->type->used;
+	inBuff->type->mark = inBuff->type->used;
   }
 
 //----------------
 
-  ptrBuffData->data = (unsigned char*)(ptrBuffData) + offs;
-  ptrBuffData->type = inBuffBuff->type;
-  ptrBuffData->refs = 1;
+  ptrPart->data = (unsigned char*)(ptrPart) + offs;
+  ptrPart->type = inBuff->type;
+  ptrPart->refs = 1;
 
-  ptrBuffData->idx = 0;
-  ptrBuffData->len = 0;
+  ptrPart->idx = 0;
+  ptrPart->len = 0;
 
-  ptrBuffData->data[0] = 0;
+  ptrPart->data[0] = 0;
 
 //----------------
 
-  ptrBuffElem = (BUFF_elem_t*) MEMO_new(BUFF_ElemMemo_s);
+  ptrElem = (BUFF_elem_t*) MEMO_new(BUFF_ElemMemo_s);
 
-  if(ptrBuffElem == NULL)
+  if(ptrElem == NULL)
   {
     BUFF_FATAL0("MEMO_new()");
   }
@@ -310,88 +310,88 @@ BUFF_part_new(BUFF_buff_t* inBuffBuff)
 
 //----------------
 
-  ptrBuffElem->part = ptrBuffData;
+  ptrElem->part = ptrPart;
 
-  if(inBuffBuff->tail == NULL)
+  if(inBuff->tail == NULL)
   {
-	inBuffBuff->head = ptrBuffElem;
-	inBuffBuff->tail = ptrBuffElem;
+	inBuff->head = ptrElem;
+	inBuff->tail = ptrElem;
   }
 
-  else // if(inBuffBuff->tail == NULL)
+  else // if(inBuff->tail == NULL)
   {
-	inBuffBuff->tail->next = ptrBuffElem;
-	ptrBuffElem->prev = inBuffBuff->tail;
+	inBuff->tail->next = ptrElem;
+	ptrElem->prev = inBuff->tail;
 
-	inBuffBuff->tail = ptrBuffElem;
+	inBuff->tail = ptrElem;
   }
 
 //----------------
 
-  TRAZA1("Returning from BUFF_part_new() = %p", ptrBuffData);
+  TRAZA1("Returning from BUFF_part_new() = %p", ptrPart);
 
-  return ptrBuffData;
+  return ptrPart;
 }
 
 /*----------------------------------------------------------------------------*/
 
 void
-BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData)
+BUFF_part_delete(BUFF_buff_t* inBuff, BUFF_part_t* inPart)
 {
-  BUFF_elem_t*			ptrBuffElem;
+  BUFF_elem_t*			ptrElem;
 
   int					found = BUFF_FALSE;
 
-  TRAZA2("Entering in BUFF_part_delete(%p, %p)", inBuffBuff, inBuffData);
+  TRAZA2("Entering in BUFF_part_delete(%p, %p)", inBuff, inPart);
 
 //----------------
 
-  ptrBuffElem = inBuffBuff->head;
+  ptrElem = inBuff->head;
 
-  while(ptrBuffElem != NULL && found == BUFF_FALSE)
+  while(ptrElem != NULL && found == BUFF_FALSE)
   {
-	if(ptrBuffElem->part == inBuffData)
+	if(ptrElem->part == inPart)
 	{
 	  found = BUFF_TRUE;
 	}
 
-	else { ptrBuffElem = ptrBuffElem->next; }
+	else { ptrElem = ptrElem->next; }
   }
 
 //----------------
 
   if(found == BUFF_TRUE)
   {
-    inBuffData->refs--;
+    inPart->refs--;
 
-    if(inBuffData->refs <= 0)
+    if(inPart->refs <= 0)
     {
-      inBuffData->type->used--;
+      inPart->type->used--;
 
-      MEMO_delete(inBuffData->type->refm, inBuffData);
+      MEMO_delete(inPart->type->refm, inPart);
     }
 
-	if(ptrBuffElem->prev != NULL)
+	if(ptrElem->prev != NULL)
 	{
-	  ptrBuffElem->prev->next = ptrBuffElem->next;
+	  ptrElem->prev->next = ptrElem->next;
 	}
 
-	if(ptrBuffElem->next != NULL)
+	if(ptrElem->next != NULL)
 	{
-	  ptrBuffElem->next->prev = ptrBuffElem->prev;
+	  ptrElem->next->prev = ptrElem->prev;
 	}
 
-	if(inBuffBuff->head != ptrBuffElem)
+	if(inBuff->head != ptrElem)
 	{
-	  inBuffBuff->head = ptrBuffElem->next;
+	  inBuff->head = ptrElem->next;
 	}
 
-	if(inBuffBuff->tail != ptrBuffElem)
+	if(inBuff->tail != ptrElem)
 	{
-	  inBuffBuff->tail = ptrBuffElem->prev;
+	  inBuff->tail = ptrElem->prev;
 	}
 
-    MEMO_delete(BUFF_ElemMemo_s, ptrBuffElem);
+    MEMO_delete(BUFF_ElemMemo_s, ptrElem);
 
     BUFF_ElemUsed_s--;
   }
@@ -404,35 +404,35 @@ BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData)
 /*----------------------------------------------------------------------------*/
 
 void
-BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData)
+BUFF_part_add(BUFF_buff_t* inBuff, BUFF_part_t* inPart)
 {
-  BUFF_elem_t*			ptrBuffElem;
+  BUFF_elem_t*			ptrElem;
 
   int					found = BUFF_FALSE;
 
-  TRAZA2("Entering in BUFF_part_add(%p, %p)", inBuffBuff, inBuffData);
+  TRAZA2("Entering in BUFF_part_add(%p, %p)", inBuff, inPart);
 
 //----------------
 
-  ptrBuffElem = inBuffBuff->head;
+  ptrElem = inBuff->head;
 
-  while(ptrBuffElem != NULL && found == BUFF_FALSE)
+  while(ptrElem != NULL && found == BUFF_FALSE)
   {
-  	if(ptrBuffElem->part == inBuffData)
+  	if(ptrElem->part == inPart)
   	{
   	  found = BUFF_TRUE;
   	}
 
-  	else { ptrBuffElem = ptrBuffElem->next; }
+  	else { ptrElem = ptrElem->next; }
   }
 
 //----------------
 
   if(found == BUFF_FALSE)
   {
-    ptrBuffElem = (BUFF_elem_t*) MEMO_new(BUFF_ElemMemo_s);
+    ptrElem = (BUFF_elem_t*) MEMO_new(BUFF_ElemMemo_s);
 
-    if(ptrBuffElem == NULL)
+    if(ptrElem == NULL)
     {
       BUFF_FATAL0("MEMO_new()");
     }
@@ -446,20 +446,20 @@ BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData)
 
 //----------------
 
-    ptrBuffElem->part = inBuffData;
+    ptrElem->part = inPart;
 
-    if(inBuffBuff->tail == NULL)
+    if(inBuff->tail == NULL)
     {
-      inBuffBuff->head = ptrBuffElem;
-      inBuffBuff->tail = ptrBuffElem;
+      inBuff->head = ptrElem;
+      inBuff->tail = ptrElem;
     }
 
-    else // if(inBuffBuff->tail == NULL)
+    else // if(inBuff->tail == NULL)
     {
-      inBuffBuff->tail->next = ptrBuffElem;
-      ptrBuffElem->prev = inBuffBuff->tail;
+      inBuff->tail->next = ptrElem;
+      ptrElem->prev = inBuff->tail;
 
-      inBuffBuff->tail = ptrBuffElem;
+      inBuff->tail = ptrElem;
     }
   }
 
@@ -474,11 +474,13 @@ BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData)
 char*
 BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars)
 {
-  BUFF_elem_t* 		elem;
-  BUFF_part_t* 		part;
+  BUFF_elem_t* 		elm;
+  long				off;
+  long				len;
+  long				inc;
 
   char*				pc;
-  char*				ps;
+  char*				ps = NULL;
 
   int				end = BUFF_FALSE;
 
@@ -486,89 +488,52 @@ BUFF_strchr(BUFF_buff_t* inBuffer, const char* inChars)
 
 //----------------
 
-  elem = inBuffer->pc1Elm; inBuffer->pcsLen = 0;
+  elm = inBuffer->pc1Elm;
+  off = inBuffer->pc1Off;
+  len = 0;
 
-  pc = (char*)(elem->part->data + inBuffer->pc1Off);
-
-  while(end == BUFF_FALSE)
+  if(off >= elm->part->type->size)
   {
-    ps = strpbrk(pc, inChars);
+	inc = off - elm->part->type->size;
 
-	if(ps != NULL)
+	if(elm->next == NULL)
 	{
-	  inBuffer->pc2Elm = elem;
-	  inBuffer->pc2Off = ps - elem->part->data;
-	  inBuffer->pcsLen = inBuffer->pcsLen + inBuffer->pc2Off;
+	  end = BUFF_TRUE;
 	}
 
-    else if(elem->part->len < elem->part->type->size)
+    else if(elm->next->part->len < inc)
     {
-  	  end = BUFF_TRUE;
+      end = BUFF_TRUE;
     }
 
-    else if(elem->next == NULL)
+    else
     {
-  	  end = BUFF_TRUE;
+      inBuffer->pc1Elm = inBuffer->pc1Elm->next;
+      inBuffer->pc2Off = 0;
     }
 
-    else if(elem->next->part->len == 0)
-    {
-  	  end = BUFF_TRUE;
-    }
-
-    else // if(elem->next->part->len > 0)
-    {
-      inBuffer->pcsLen += elem->part->type->size;
-      inBuffer->pcsLen += elem->part->data - pc;
-
-	  elem = elem->next;
-
-	  pc = (char*)(elem->part->data);
-
-      ps = strpbrk(pc, inChars);
-    }
+    elm = inBuffer->pc1Elm;
+    off = inBuffer->pc1Off;
   }
 
 //----------------
 
-  TRAZA1("Returning from BUFF_strchr() = %p", ps);
-
-  return ps;
-}
-
-/*----------------------------------------------------------------------------*/
-
-char*
-BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
-{
-  BUFF_elem_t* 		elm = inBuffer->pc1Elm;
-  long				off = inBuffer->pc1Off;
-  long				len = 0;
-  long				spn = 0;
-  long				max = 0;
-
-  char*				pc;
-  char*				ps;
-
-  int				end = BUFF_FALSE;
-
-  TRAZA2("Entering in BUFF_strspn(%p, %s)", inBuffer, inChars);
-
-//----------------
-
-  pc = (char*)(elm->part->data + off);
-
   while(end == BUFF_FALSE)
   {
-	if(*pc != 0)
-	{
-      spn = strspn(pc, inChars); off += spn;
+    pc = (char*)(elm->part->data + off);
 
-      if(off < elm->part->type->size)
-      {
+    ps = strpbrk(pc, inChars);
 
-      }
-	}
+    if(ps != NULL)
+    {
+      off = ps - elm->part->data; len += ps - pc;
+
+      inBuffer->pc2Elm = elm;
+      inBuffer->pc2Off = off;
+      inBuffer->pcsLen = len;
+
+      end = BUFF_TRUE;
+    }
 
     else if(elm->part->len < elm->part->type->size)
     {
@@ -587,19 +552,21 @@ BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
 
     else // if(elm->next->part->len > 0)
     {
-      elm = elm->next; off = 0;
+      if(inBuffer->pc1Off >= inBuffer->pc1Elm->part->type->size)
+      {
+        inBuffer->pc1Elm = inBuffer->pc1Elm->next;
+        inBuffer->pc2Off = 0;
+      }
 
-	  pc = (char*)(elm->part->data);
+      len += elm->part->type->size - off;
+
+      elm = elm->next; off = 0;
     }
   }
 
-  inBuffer->pc2Elm = elm;
-  inBuffer->pc2Off = off;
-  inBuffer->pcsLen = len;
-
 //----------------
 
-  TRAZA1("Returning from BUFF_strspn() = %p", ps);
+  TRAZA1("Returning from BUFF_strchr() = %p", ps);
 
   return ps;
 }
@@ -609,59 +576,86 @@ BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
 char*
 BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
 {
-  BUFF_elem_t* 		elem = inBuffer->pc1Elm;
+  BUFF_elem_t* 		elm;
+  long				off;
+  long				len;
+  long				spn;
+  long				inc;
 
-  char*				pc;
-  char*				ps;
+  char*				pc = NULL;
 
-  long				off = inBuffer->pc1Off;
-  long				len = inBuffer->pcsLen;
-
-  int				check = BUFF_TRUE;
+  int				end = BUFF_FALSE;
 
   TRAZA2("Entering in BUFF_strspn(%p, %s)", inBuffer, inChars);
 
 //----------------
 
-  pc = (char*)(elem->part->data + off);
+  elm = inBuffer->pc1Elm;
+  off = inBuffer->pc1Off;
+  len = 0;
 
-  while(len > 0 && check == BUFF_TRUE)
+  if(off >= elm->part->type->size)
   {
-	if(pc != NULL)
+	inc = off - elm->part->type->size;
+
+	if(elm->next == NULL)
 	{
-      ps = strchr(inChars, *pc);
-
-      if(ps == NULL)
-      {
-    	check = BUFF_FALSE;
-      }
-
-      else // if(ps != NULL)
-      {
-    	len--; off++; pc++;
-      }
+	  end = BUFF_TRUE;
 	}
 
-    else if(elem->part->len < elem->part->type->size)
+    else if(elm->next->part->len < inc)
     {
-      check = BUFF_FALSE;
+      end = BUFF_TRUE;
     }
 
-    else if(elem->next == NULL)
+    else
     {
-      check = BUFF_FALSE;
+      inBuffer->pc1Elm = inBuffer->pc1Elm->next;
+      inBuffer->pc2Off = 0;
+
+      elm = inBuffer->pc1Elm;
+      off = inBuffer->pc1Off;
+    }
+  }
+
+//----------------
+
+  while(end == BUFF_FALSE)
+  {
+    pc = (char*)(elm->part->data + off);
+
+    spn = strspn(pc, inChars);
+
+    len += spn; off += spn; pc += spn;
+
+    if(off < elm->part->type->size)
+    {
+      inBuffer->pc2Elm = elm;
+      inBuffer->pc2Off = off;
+      inBuffer->pcsLen = len;
+
+      end = BUFF_TRUE;
     }
 
-    else if(elem->next->part->len == 0)
+    else if(elm->next == NULL)
     {
-      check = BUFF_FALSE;
+      end = BUFF_TRUE;
     }
 
-    else // if(inBuffer->pc1Elm->next->part->len > 0)
+    else if(elm->next->part->len == 0)
     {
-      elem = elem->next; off = 0;
+      end = BUFF_TRUE;
+    }
 
-	  pc = (char*)(elem->part->data);
+    else // if(elm->next->part->len > 0)
+    {
+      if(inBuffer->pc1Off >= inBuffer->pc1Elm->part->type->size)
+      {
+        inBuffer->pc1Elm = inBuffer->pc1Elm->next;
+        inBuffer->pc2Off = 0;
+      }
+
+      elm = elm->next; off = 0;
     }
   }
 
@@ -675,25 +669,84 @@ BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
 /*----------------------------------------------------------------------------*/
 
 char*
-BUFF_strfix(BUFF_buff_t* inBuffer, BUFF_buff_t* inAuxBuff)
+BUFF_strfix(BUFF_buff_t* inBuffer, BUFF_buff_t* inAuxBuff, int* outFix)
 {
-  BUFF_elem_t* 		elem = inBuffer->pc1Elm;
+  BUFF_elem_t* 		dst;
+  long				dof;
+
+  BUFF_elem_t* 		src;
+  long				sof;
+
+  long				len;
+  long				inc;
 
   char*				pc;
-  char*				ps;
 
-  long				off = inBuffer->pc1Off;
-  long				len = inBuffer->pcsLen;
+  int				end = BUFF_FALSE;
 
-  int				check = BUFF_TRUE;
-
-  TRAZA2("Entering in BUFF_strfix(%p, %p)", inBuffer, inAuxBuff);
+  TRAZA3("Entering in BUFF_strfix(%p, %p, %p)", inBuffer, inAuxBuff, outFix);
 
 //----------------
 
   if(inBuffer->pc1Elm == inBuffer->pc2Elm)
   {
     pc = (char*)(inBuffer->pc1Elm->part->data + inBuffer->pc1Off);
+  }
+
+  else // if(inBuffer->pc1Elm != inBuffer->pc2Elm)
+  {
+	if(inAuxBuff->tail == NULL)
+	{
+	  BUFF_part_new(inAuxBuff);
+	}
+
+	src = inBuffer->pc1Elm;
+	sof = inBuffer->pc1Off;
+	len = inBuffer->pcsLen + 1;
+
+	dst = inAuxBuff->tail;
+	dof = inAuxBuff->tail->part->len;
+
+	if(len > (dst->part->type->size - dst->part->len))
+	{
+	  if(dst->part->len == 0)
+	  {
+		len = dst->part->type->size;
+	  }
+
+	  else // if(dst->part->len >= 0)
+	  {
+		BUFF_part_new(inAuxBuff);
+
+     	dst = inAuxBuff->tail;
+	    dof = inAuxBuff->tail->part->len;
+
+		len = BUFF_MAXI(len, dst->part->type->size);
+	  }
+	}
+
+	pc = (char*)(dst->part->data + dof);
+
+	while(end == BUFF_FALSE)
+	{
+      inc = BUFF_MINI(len, src->part->type->size - sof);
+
+	  memcpy(dst->part->data + dof, src->part->data + sof, inc);
+
+	  dof += inc; sof += inc; len -= inc;
+
+	  if(len > 0)
+	  {
+		src = src->next; sof = 0;
+	  }
+
+	  else // if(len <= 0)
+	  {
+		dst->part->len = dof;
+
+		end = BUFF_FALSE;
+	  }
+	}
   }
 
 //----------------
