@@ -12,9 +12,15 @@
 #include <stdlib.h>
 #include <uv.h>
 
+#include <trace_macros.h>
+#include <jsonif.h>
+
 int main(void)
 {
   uv_loop_t *loop = malloc(sizeof(uv_loop_t));
+
+  TRACE_level_change(TRACE_TYPE_APPL, 3);
+  JSON_initialize();
 
   uv_loop_init(loop);
   printf("uv_loop_init()\n");

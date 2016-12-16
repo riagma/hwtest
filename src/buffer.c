@@ -72,7 +72,7 @@ static MEMO_refmemo_t*		BUFF_BuffMemo_s = 0;
 static long					BUFF_BuffUsed_s = 0;
 static long					BUFF_BuffMark_s = 0;
 
-static RFTR_reftree_t*		BUFF_MemoTree_s = 0;
+static RFTR_reftree_t		BUFF_MemoTree_s[1];
 static long					BUFF_MemoUsed_s = 0;
 static long					BUFF_MemoMark_s = 0;
 
@@ -108,14 +108,14 @@ BUFF_initialize(void)
 
     if(BUFF_ElemMemo_s == NULL)
     {
-      BUFF_FATAL0("ERROR: MEMO_createRefMemo()");
+      BUFF_FATAL0("FATAL: MEMO_createRefMemo()");
     }
 
 	BUFF_BuffMemo_s = MEMO_createRefMemo(&b, &b.memo, sizeof(b), 16, 2);
 
     if(BUFF_BuffMemo_s == NULL)
     {
-      BUFF_FATAL0("ERROR: MEMO_createRefMemo()");
+      BUFF_FATAL0("FATAL: MEMO_createRefMemo()");
     }
 
     if(RFTR_initializeRefTree(BUFF_MemoTree_s, &m, &m.tree, BUFF_memo_cmp) < 0)
@@ -188,12 +188,9 @@ BUFF_memo_new(long inSize, long inBlen, long inBmin)
 	BUFF_MemoMark_s = BUFF_MemoUsed_s;
   }
 
-  if(RFTR_insert(BUFF_MemoTree_s, ptrBuffMemo) != RFTR_RC_OK)
-  {
-    BUFF_FATAL0("ERROR: RFTR_insert()");
-  }
-
 //----------------
+
+  memset(ptrBuffMemo, 0, sizeof(BUFF_memo_t));
 
   size = sizeof(BUFF_part_t) + inSize + 2; size = BUFF_ALING(size);
 
@@ -201,7 +198,12 @@ BUFF_memo_new(long inSize, long inBlen, long inBmin)
 
   if(ptrBuffMemo->refm == NULL)
   {
-    BUFF_FATAL0("ERROR: MEMO_createRefMemo()");
+    BUFF_FATAL0("FATAL: MEMO_createRefMemo()");
+  }
+
+  if(RFTR_insert(BUFF_MemoTree_s, ptrBuffMemo) != RFTR_RC_OK)
+  {
+    BUFF_FATAL0("FATAL: RFTR_insert()");
   }
 
 //----------------

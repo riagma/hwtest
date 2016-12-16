@@ -68,9 +68,9 @@ enum e_AUXF_RC
 
 typedef struct T_tag
 {
-  long		 		sec;
-  long				hth;
-  struct tm             	stm;
+  time_t		 	sec;
+  time_t			hth;
+  struct tm			stm;
   char				tms[AUXF_MAXLEN_TIMESTAMP + 1];
 
 } T_t;
@@ -266,15 +266,15 @@ int AUXF_is_alfanum(const char*	inString);
 int AUXF_is_alfanum_c(int inC);
 
 /*--------------------------------------------------------------------------*/
-
+/*
 char* AUXF_local_ip_get(char* outAddr);
 
 int AUXF_local_ip_check(char* inAddr);
 
 int AUXF_local_address_check(char* inAddr);
 
-void AUXF_local_address_load(void); 
-
+void AUXF_local_address_load(void);
+*/
 /*--------------------------------------------------------------------------*/
 
 void AUXF_set_fatal_error(void (*)(char*, int, const char*, ...));

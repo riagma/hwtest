@@ -480,6 +480,21 @@ TRACE_write(int inType, int inLevel, const char* inTrace, ...)
     }
   }
 
+  else
+  {
+	t = time(NULL); localtime_r(&t, &tm);
+
+	strftime(tms, TRACE_MAXLEN_TIMESTAMP + 1, "%Y%m%d%H%M%S", &tm);
+
+    va_start(list, inTrace);
+
+    vsnprintf(line, TRACE_MAXLEN_TRACE + 1, inTrace, list);
+
+    va_end(list);
+
+    printf("[%s][%d] %s\n", tms, inLevel, line);
+  }
+
 /*----------*/
 #endif
 /*----------*/

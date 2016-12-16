@@ -131,6 +131,8 @@ JSON_initialize(void)
   {
 	JSON_Init_s = JSON_TRUE;
 
+	BUFF_initialize();
+
 	JSON_BuffMemo_s = BUFF_memo_new(64 * 1024, 32, 2);
 
 	JSON_BuffRefs_s = BUFF_buff_new(JSON_BuffMemo_s);
@@ -661,6 +663,8 @@ JSON_name_decode
   JSON_pair_t*			inPair
 )
 {
+  BUFF_elem_t*			idxElm;
+
   char*					pc;
 
   int					state;
@@ -765,6 +769,24 @@ JSON_name_decode
       }
     }
   }
+
+//----------------
+
+  while(JSON_BuffRefs_s->head != JSON_BuffRefs_s->tail)
+  {
+	BUFF_part_add(inObject->buffRefs, JSON_BuffRefs_s->head->part);
+	BUFF_part_delete(JSON_BuffRefs_s, JSON_BuffRefs_s->head->part);
+  }
+
+  BUFF_part_add(inObject->buffRefs, JSON_BuffRefs_s->tail->part);
+
+  for(idxElm = inBuffer->head; idxElm != inBuffer->idxElm;)
+  {
+	BUFF_part_add(inObject->buffRefs, idxElm->part);
+	BUFF_part_delete(inBuffer, idxElm->part); idxElm = idxElm->next;
+  }
+
+  BUFF_part_add(inObject->buffRefs, inBuffer->idxElm->part);
 
 //----------------
 

@@ -17,58 +17,34 @@ ____________________________________________________________________________
 ____________________________________________________________________________*/
 
 
-/*__INCLUDES DE LA APLICACION_______________________________________________*/
-
-#include "trace_macros_libs.h"
-#include "auxfunctions.h"
-
-/*__INCLUDES DE LA BD_______________________________________________________*/
-
 /*__INCLUDES DEL SISTEMA____________________________________________________*/
 
-#include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
 
-
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/types.h>
-
-#include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 
 #ifdef __linux__ 
-#include <dirent.h>
-#include <semaphore.h>
-#include <netdb.h>
 #include <pwd.h>
-#include <arpa/inet.h>
-#include <net/if.h>
-#include <sys/ipc.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/shm.h>
-#include <sys/times.h>
-#include <sys/wait.h>
 #endif
 
 #ifdef _WIN64
-#include <dirent.h>
-#include <semaphore.h>
 #include <winsock2.h>
-#include <mswsock.h>
 #include <ws2tcpip.h>
 #include <windows.h>
 #endif
+
+/*__INCLUDES DE LA BD_______________________________________________________*/
+
+/*__INCLUDES DE LA APLICACION_______________________________________________*/
+
+#include "trace_macros_libs.h"
+#include "auxfunctions.h"
 
 /*__CONSTANTES______________________________________________________________*/
 
@@ -79,11 +55,11 @@ ____________________________________________________________________________*/
 /*__VARIABLES PRIVADAS______________________________________________________*/
 
 //----------------
-
+/*
 static RFTR_reftree_t	a_LocalIpTree[1];
 static RFTR_reftree_t	a_LocalAddressTree[1];
 static int		a_LocalAddressInit = AUXF_FALSE;
-
+*/
 //----------------
 
 static void (*a_external_fatal_error)(char*, int, const char*, ...) = NULL;
@@ -93,7 +69,7 @@ static void (*a_external_fatal_error)(char*, int, const char*, ...) = NULL;
 /*__DEFINICIONES ADELANTADAS________________________________________________*/
 
 /*--------------------------------------------------------------------------*/
-extern struct tm* localtime_r(const time_t*, struct tm*); /* NO warning */
+extern struct tm *localtime_r(const time_t *timep, struct tm *result);
 /*--------------------------------------------------------------------------*/
 
 /*__FUNCIONES PRIVADAS______________________________________________________*/
@@ -102,7 +78,7 @@ extern struct tm* localtime_r(const time_t*, struct tm*); /* NO warning */
 
 static char* AUXF_trim_s(char* ioStr, char inC, int inLrb);
 
-static int AUXF_local_address_cmp(void* inPtrVoidA, void* inPtrVoidB);
+// static int AUXF_local_address_cmp(void* inPtrVoidA, void* inPtrVoidB);
 
 //----------------
 
@@ -208,7 +184,7 @@ AUXF_sec_r
   int		inSS
 )
 {
-  long			aux;
+  time_t			aux;
 
   struct tm 		stm;
 
@@ -272,7 +248,7 @@ AUXF_sec_to_tms(long inSec, char* outTms)
 {
   struct tm 		tm;
 
-  localtime_r(&inSec, &tm);
+  localtime_r((time_t*)(&inSec), &tm);
   
   strftime(outTms, 15, "%Y%m%d%H%M%S", &tm);
 
@@ -1076,7 +1052,9 @@ AUXF_scape_del(char* ioStr)
 
   for(i = 0, j=0; i < len; i++, j++)
   {
-    if(ioStr[i] == '\\') i++; ioStr[j] = ioStr[i];
+    if(ioStr[i] == '\\') i++;
+
+    ioStr[j] = ioStr[i];
   }
 
   ioStr[j] = 0;
@@ -1246,7 +1224,7 @@ AUXF_hex_to_mem
     
     if(len < inMemLen)
     {
-      sscanf(str, "%hhx", &mem[len++]);
+      sscanf(str, "%x", (int*)(&mem[len++]));
     }
   }
 
@@ -1379,7 +1357,7 @@ AUXF_random_get()
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
-
+/*
 char*
 AUXF_login_get
 (
@@ -1410,7 +1388,7 @@ AUXF_login_get
 
   return outLogin;
 }
-
+*/
 /*--------------------------------------------------------------------------*/
 
 char*
@@ -1420,7 +1398,9 @@ AUXF_machine_get
   char*			outMachine
 )
 {
+#ifndef _WIN64
   gethostname(outMachine, inMaxLen); 
+#endif
 
   outMachine[inMaxLen] = 0;
 
@@ -1487,7 +1467,7 @@ AUXF_is_alfanum_c
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
-
+/*
 static int 
 AUXF_local_address_cmp(void* inPtrVoidA, void* inPtrVoidB)
 {
@@ -1504,9 +1484,9 @@ AUXF_local_address_cmp(void* inPtrVoidA, void* inPtrVoidB)
 
   return cmp;
 }
-
+*/
 /*----------------------------------------------------------------------------*/
-
+/*
 char*
 AUXF_local_ip_get(char* outAddr) 
 {
@@ -1545,9 +1525,9 @@ AUXF_local_ip_get(char* outAddr)
 
   return outAddr;
 }
-
+*/
 /*----------------------------------------------------------------------------*/
-
+/*
 int
 AUXF_local_ip_check(char* inAddr) 
 {
@@ -1580,9 +1560,9 @@ AUXF_local_ip_check(char* inAddr)
 
   return ret;
 }
-
+*/
 /*----------------------------------------------------------------------------*/
-
+/*
 int
 AUXF_local_address_check(char* inAddr) 
 {
@@ -1615,9 +1595,9 @@ AUXF_local_address_check(char* inAddr)
 
   return ret;
 }
-
+*/
 /*----------------------------------------------------------------------------*/
-
+/*
 void
 AUXF_local_address_load(void) 
 {
@@ -1814,7 +1794,7 @@ AUXF_local_address_load(void)
     SUCESO2("- LAD(%02ld) = <%s>", num++, pla->addr);
   }
 }
-
+*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
