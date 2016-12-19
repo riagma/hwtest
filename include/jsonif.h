@@ -124,6 +124,7 @@ extern const char*			JSON_RC[];
 
 typedef struct JSON_map_tag			JSON_map_t;
 typedef struct JSON_value_tag		JSON_value_t;
+typedef struct JSON_array_tag		JSON_array_t;
 typedef struct JSON_pair_tag		JSON_pair_t;
 typedef struct JSON_object_tag		JSON_object_t;
 
@@ -143,9 +144,21 @@ struct JSON_map_tag
 struct JSON_value_tag
 {
   int					type;
-  void*					value;
+  void*					data;
 
   RLST_element_t		list;
+  MEMO_element_t		memo;
+};
+
+//---------------- Array
+
+struct JSON_array_tag
+{
+  RLST_reflist_t		list[1];
+
+  int					type;
+  JSON_value_t*			curr;
+
   MEMO_element_t		memo;
 };
 
@@ -203,6 +216,9 @@ void JSON_value_delete(JSON_value_t* inValue);
 
 int JSON_value_cmp(void* inVoidA, void* inVoidB);
 
+JSON_array_t* JSON_array_new(void);
+void JSON_array_delete(JSON_array_t* inArray);
+
 JSON_pair_t* JSON_pair_new(void);
 void JSON_pair_delete(JSON_pair_t* inPair);
 
@@ -247,7 +263,7 @@ int JSON_value_decode
 (
   JSON_object_t*		inObject,
   BUFF_buff_t*			inBuffer,
-  JSON_pair_t*			inPair,
+  JSON_value_t*			inValue,
   char*					outSep
 );
 

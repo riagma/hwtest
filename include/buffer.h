@@ -161,21 +161,21 @@ int BUFF_initialize(void);
 //----------------
 
 BUFF_memo_t* BUFF_memo_new(long inSize, long inBlen, long inBmin);
-void BUFF_memo_delete(BUFF_memo_t* inBuffMemo);
+void BUFF_memo_delete(BUFF_memo_t* inMemo);
 
 int BUFF_memo_cmp(void* inVoidA, void* inVoidB);
 
 //----------------
 
-BUFF_part_t* BUFF_part_new(BUFF_buff_t* inBuffBuff);
-void BUFF_part_delete(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
+BUFF_part_t* BUFF_part_new(BUFF_buff_t* inBuff);
+void BUFF_part_delete(BUFF_buff_t* inBuff, BUFF_part_t* inPart);
 
-void BUFF_part_add(BUFF_buff_t* inBuffBuff, BUFF_part_t* inBuffData);
+void BUFF_part_add(BUFF_buff_t* inBuff, BUFF_part_t* inPart);
 
 //----------------
 
-BUFF_buff_t* BUFF_buff_new(BUFF_memo_t* inBuffMemo);
-void BUFF_buff_delete(BUFF_buff_t* inBuffBuff);
+BUFF_buff_t* BUFF_buff_new(BUFF_memo_t* inMemo);
+void BUFF_buff_delete(BUFF_buff_t* inBuff);
 
 //----------------
 

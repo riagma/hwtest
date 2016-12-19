@@ -76,7 +76,7 @@ extern struct tm *localtime_r(const time_t *timep, struct tm *result);
 
 //----------------
 
-static char* AUXF_trim_s(char* ioStr, char inC, int inLrb);
+static char* AUXF_trim_s(char* ioStr, char* inCs, int inLrb);
 
 // static int AUXF_local_address_cmp(void* inPtrVoidA, void* inPtrVoidB);
 
@@ -999,7 +999,7 @@ AUXF_tval_substract
 /*--------------------------------------------------------------------------*/
 
 static char*
-AUXF_trim_s(char* ioStr, char inC, int inLrb)
+AUXF_trim_s(char* ioStr, char* inChars, int inLrb)
 {
   long		i;
   long		len;
@@ -1007,14 +1007,14 @@ AUXF_trim_s(char* ioStr, char inC, int inLrb)
   if((inLrb == 1) || (inLrb == 2))
   {
     len = strlen(ioStr);
-    for(i = len - 1; (i >= 0) && (ioStr[i] == inC); i--);
+    for(i = len - 1; (i >= 0) && (strchr(inChars, ioStr[i])); i--);
     ioStr[i + 1] = 0;
   }
 
   if((inLrb == 0) || (inLrb == 2))
   {
     len = strlen(ioStr);
-    for(i = 0; (i < len) && (ioStr[i] == inC); i++);
+    for(i = 0; (i < len) && (strchr(inChars, ioStr[i])); i++);
     memmove(ioStr, ioStr + i, len - i + 1);
   }
 
@@ -1023,21 +1023,21 @@ AUXF_trim_s(char* ioStr, char inC, int inLrb)
 
 /*--------------------------------------------------------------------------*/
 
-char* AUXF_ltrim(char* ioStr) { return AUXF_trim_s(ioStr,' ',0); }
-char* AUXF_rtrim(char* ioStr) { return AUXF_trim_s(ioStr,' ',1); }
-char* AUXF_btrim(char* ioStr) { return AUXF_trim_s(ioStr,' ',2); }
+char* AUXF_ltrim(char* ioStr, char* inCs) { return AUXF_trim_s(ioStr,inCs,0); }
+char* AUXF_rtrim(char* ioStr, char* inCs) { return AUXF_trim_s(ioStr,inCs,1); }
+char* AUXF_btrim(char* ioStr, char* inCs) { return AUXF_trim_s(ioStr,inCs,2); }
 
 /*--------------------------------------------------------------------------*/
 
-char* AUXF_ltrim0(char* ioStr) { return AUXF_trim_s(ioStr,'0',0); }
-char* AUXF_rtrim0(char* ioStr) { return AUXF_trim_s(ioStr,'0',1); }
-char* AUXF_btrim0(char* ioStr) { return AUXF_trim_s(ioStr,'0',2); }
+char* AUXF_ltrimS(char* ioStr) { return AUXF_trim_s(ioStr," \t",0); }
+char* AUXF_rtrimS(char* ioStr) { return AUXF_trim_s(ioStr," \t",1); }
+char* AUXF_btrimS(char* ioStr) { return AUXF_trim_s(ioStr," \t",2); }
 
 /*--------------------------------------------------------------------------*/
 
-char* AUXF_ltrimC(char* ioStr, char inC) { return AUXF_trim_s(ioStr,inC,0); }
-char* AUXF_rtrimC(char* ioStr, char inC) { return AUXF_trim_s(ioStr,inC,1); }
-char* AUXF_btrimC(char* ioStr, char inC) { return AUXF_trim_s(ioStr,inC,2); }
+char* AUXF_ltrim0(char* ioStr) { return AUXF_trim_s(ioStr,"0",0); }
+char* AUXF_rtrim0(char* ioStr) { return AUXF_trim_s(ioStr,"0",1); }
+char* AUXF_btrim0(char* ioStr) { return AUXF_trim_s(ioStr,"0",2); }
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/

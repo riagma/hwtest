@@ -194,6 +194,7 @@ BUFF_memo_new(long inSize, long inBlen, long inBmin)
 
   size = sizeof(BUFF_part_t) + inSize + 2; size = BUFF_ALING(size);
 
+  ptrBuffMemo->size = size;
   ptrBuffMemo->refm = MEMO_createRefMemo(&d, &d.memo, size, inBlen, inBmin);
 
   if(ptrBuffMemo->refm == NULL)
@@ -482,7 +483,7 @@ BUFF_buff_new(BUFF_memo_t* inBuffMemo)
 
 //----------------
 
-  ptrBuff = MEMO_new(BUFF_ElemMemo_s);
+  ptrBuff = MEMO_new(BUFF_BuffMemo_s);
 
   if(ptrBuff == NULL)
   {
@@ -497,9 +498,7 @@ BUFF_buff_new(BUFF_memo_t* inBuffMemo)
   }
 
 //----------------
-
   ptrBuff->type = inBuffMemo;
-
 //----------------
 
   TRAZA1("Returning from BUFF_buff_new() = %p", ptrBuff);
@@ -515,6 +514,11 @@ BUFF_buff_delete(BUFF_buff_t* inBuff)
   TRAZA1("Entering in BUFF_buff_delete(%p)", inBuff);
 
 //----------------
+
+  while(inBuff->head != NULL)
+  {
+	BUFF_part_delete(inBuff, inBuff->head->part);
+  }
 
   MEMO_delete(BUFF_BuffMemo_s, inBuff);
 
@@ -684,6 +688,8 @@ BUFF_strspn(BUFF_buff_t* inBuffer, const char* inChars)
     spn = strspn(pc, inChars);
 
     len += spn; off += spn; pc += spn;
+
+    if(*pc == 0) pc = NULL;
 
     if(off < elm->part->type->size)
     {

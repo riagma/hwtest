@@ -195,17 +195,17 @@ void AUXF_tval_substract
 
 /*--------------------------------------------------------------------------*/
 
-char* AUXF_ltrim(char* ioStr);
-char* AUXF_rtrim(char* ioStr);
-char* AUXF_btrim(char* ioStr);
+char* AUXF_ltrim(char* ioStr, char* inCs);
+char* AUXF_rtrim(char* ioStr, char* inCs);
+char* AUXF_btrim(char* ioStr, char* inCs);
+
+char* AUXF_ltrimS(char* ioStr);
+char* AUXF_rtrimS(char* ioStr);
+char* AUXF_btrimS(char* ioStr);
 
 char* AUXF_ltrim0(char* ioStr);
 char* AUXF_rtrim0(char* ioStr);
 char* AUXF_btrim0(char* ioStr);
-
-char* AUXF_ltrimC(char* ioStr, char inC);
-char* AUXF_rtrimC(char* ioStr, char inC);
-char* AUXF_btrimC(char* ioStr, char inC);
 
 /*--------------------------------------------------------------------------*/
 
