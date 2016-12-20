@@ -589,6 +589,8 @@ JSON_object_delete(JSON_object_t* inObject)
 
   while((ptrPair = RFTR_extractMini(inObject->pairTree)))
   {
+	RLST_extract(inObject->pairList, ptrPair);
+
 	JSON_pair_delete(ptrPair);
   }
 
@@ -1053,10 +1055,6 @@ JSON_array_decode
 {
   JSON_array_t*			ptrArray;
 
-  char*					pc;
-
-  int					state;
-
   int					end = JSON_FALSE;
   int					ret = JSON_RC_OK;
 
@@ -1081,7 +1079,7 @@ JSON_array_decode
 
 	if(ret == JSON_RC_OK)
 	{
-	  if(*outSep == ',' || outSep == ']')
+	  if(*outSep == ',' || *outSep == ']')
 	  {
         if(RLST_insertTail(ptrArray->list, ptrArray->curr) != RFTR_RC_OK)
         {
@@ -1217,9 +1215,6 @@ JSON_number_decode
   char*					pc;
   char*					value;
 
-  int					state;
-
-  int					end = JSON_FALSE;
   int					ret = JSON_RC_OK;
 
   TRAZA3("Entering in JSON_number_decode(%p, %p, %p)",
@@ -1282,9 +1277,6 @@ JSON_literal_decode
   char*					pc;
   char*					value;
 
-  int					state;
-
-  int					end = JSON_FALSE;
   int					ret = JSON_RC_OK;
 
   TRAZA3("Entering in JSON_string_decode(%p, %p, %p)",

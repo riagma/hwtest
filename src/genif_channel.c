@@ -45,12 +45,12 @@ ______________________________________________________________________________*/
 
 /*__FUNCIONES PRIVADAS________________________________________________________*/
 
-/*----------*/ // Channel
+//---------------- // Channel
 
 static int GENIF_channel_message_end
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg,
+  GENIF_message_t*		inMsg,
   int				inEndType,
   int				inStoreType
 );
@@ -71,23 +71,23 @@ static void GENIF_channel_write_cb(int inFd, void* inChannel);
 static void GENIF_channel_process_in_msg_cb
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 );
 
 static void GENIF_channel_process_out_msg_cb
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 );
 
 static void GENIF_channel_notify
 (
   GENIF_channel_t*		inChannel,
   int				inNotify,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 );
 
-/*----------*/
+//----------------
 
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -96,14 +96,14 @@ int
 GENIF_channel_pre_initialize
 (
   GENIF_channel_t* 		inChannel,
-  void*				inPtrParent,
+  void*				inParent,
   int				inChannelType,
   GENIF_message_t*		(*inExtQueueFunc)(GENIF_channel_t*),
   void				(*inCbNotify)(GENIF_channel_t*, int,
 					      GENIF_message_t*),
-  GENIF_channel_config_t*	inPtrConfig,
-  GENIF_channel_counter_t*	inPtrCounter,
-  GENIF_modifier_t*		inPtrModifier
+  GENIF_channel_config_t*	inConfig,
+  GENIF_channel_counter_t*	inCounter,
+  GENIF_modifier_t*		inModifier
 )
 {
   long				T = time(NULL);
@@ -116,7 +116,7 @@ GENIF_channel_pre_initialize
 
   TRAZA1("Entering in GENIF_channel_pre_initialize(%p)", inChannel);
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -124,10 +124,10 @@ GENIF_channel_pre_initialize
 
     inChannel->fd       = -1;
     inChannel->type     = inChannelType;
-    inChannel->parent   = inPtrParent;
+    inChannel->parent   = inParent;
     inChannel->cbNotify = inCbNotify;
 
-    inChannel->modifier = inPtrModifier;
+    inChannel->modifier = inModifier;
 
     inChannel->extRef = NULL;
     inChannel->state  = 0;
@@ -172,13 +172,13 @@ GENIF_channel_pre_initialize
 //  inChannel->outRef;
 //  inChannel->inRef;
 
-    inChannel->config  = inPtrConfig;
-    inChannel->counter = inPtrCounter;
+    inChannel->config  = inConfig;
+    inChannel->counter = inCounter;
 
     inChannel->notDelete = GENIF_FALSE;
   }
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -190,7 +190,7 @@ GENIF_channel_pre_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -203,7 +203,7 @@ GENIF_channel_pre_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -215,7 +215,7 @@ GENIF_channel_pre_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -227,7 +227,7 @@ GENIF_channel_pre_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_pre_initialize() = %d", ret);
 
@@ -247,7 +247,7 @@ GENIF_channel_fd_initialize
 
   TRAZA2("Entering in GENIF_channel_fd_initialize(%p, %d)", inChannel, inFd);
 
-/*----------*/
+//----------------
 
   inChannel->fd = inFd;
     
@@ -258,7 +258,7 @@ GENIF_channel_fd_initialize
 
   GENIF_channel_mask(inChannel);
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_fd_initialize() = %d", ret);
 
@@ -272,14 +272,14 @@ GENIF_channel_initialize
 (
   GENIF_channel_t* 		inChannel,
   int				inFd,
-  void*				inPtrParent,
+  void*				inParent,
   int				inChannelType,
   GENIF_message_t*		(*inExtQueueFunc)(GENIF_channel_t*),
   void				(*inCbNotify)(GENIF_channel_t*, int,
 					      GENIF_message_t*),
-  GENIF_channel_config_t*	inPtrConfig,
-  GENIF_channel_counter_t*	inPtrCounter,
-  GENIF_modifier_t*		inPtrModifier
+  GENIF_channel_config_t*	inConfig,
+  GENIF_channel_counter_t*	inCounter,
+  GENIF_modifier_t*		inModifier
 )
 {
   long				T = time(NULL);
@@ -292,7 +292,7 @@ GENIF_channel_initialize
 
   TRAZA2("Entering in GENIF_channel_initialize(%p, %d)", inChannel, inFd);
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -300,10 +300,10 @@ GENIF_channel_initialize
 
     inChannel->fd       = inFd;
     inChannel->type     = inChannelType;
-    inChannel->parent   = inPtrParent;
+    inChannel->parent   = inParent;
     inChannel->cbNotify = inCbNotify;
 
-    inChannel->modifier = inPtrModifier;
+    inChannel->modifier = inModifier;
 
     inChannel->extRef = NULL;
     inChannel->state  = 0;
@@ -348,13 +348,13 @@ GENIF_channel_initialize
 //  inChannel->outRef;
 //  inChannel->inRef;
 
-    inChannel->config  = inPtrConfig;
-    inChannel->counter = inPtrCounter;
+    inChannel->config  = inConfig;
+    inChannel->counter = inCounter;
 
     inChannel->notDelete = GENIF_FALSE;
   }
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -366,7 +366,7 @@ GENIF_channel_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -379,7 +379,7 @@ GENIF_channel_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -391,7 +391,7 @@ GENIF_channel_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -403,7 +403,7 @@ GENIF_channel_initialize
     }
   }
   
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
@@ -415,7 +415,7 @@ GENIF_channel_initialize
     GENIF_channel_mask(inChannel);
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_initialize() = %d", ret);
 
@@ -433,24 +433,24 @@ GENIF_channel_fd_finalize
 {
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_fd_finalize(%p, %d)", 
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if(inChannel->fd != -1)
   {
     forceEndChannel(inChannel->fd); close(inChannel->fd); inChannel->fd = -1;
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_empty(inChannel, GENIF_END_USER);
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_fd_initialize() = %d", ret);
 
@@ -464,24 +464,24 @@ GENIF_channel_finalize(GENIF_channel_t* inChannel)
 {
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_finalize(%p, %d)", 
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if(inChannel->fd != -1)
   {
     forceEndChannel(inChannel->fd); close(inChannel->fd); inChannel->fd = -1;
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_empty(inChannel, GENIF_END_USER);
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_finalize() = %d", ret);
 
@@ -506,13 +506,13 @@ GENIF_channel_address(GENIF_channel_t* inChannel)
   
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_address(%p, %d)", 
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if(inChannel->fd != -1)
   {
@@ -534,7 +534,7 @@ GENIF_channel_address(GENIF_channel_t* inChannel)
 	       inChannel->locPort);
     }
 
-/*----------*/
+//----------------
 
     rc = getpeername(inChannel->fd, &saddr, &len2);
 
@@ -555,7 +555,7 @@ GENIF_channel_address(GENIF_channel_t* inChannel)
     }
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_address() = %d", ret);
 
@@ -572,13 +572,13 @@ GENIF_channel_empty(GENIF_channel_t* inChannel, int inEndType)
 
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_empty(%p, %d)", 
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if(inChannel->outBuffMsg != NULL)
   {
@@ -594,7 +594,7 @@ GENIF_channel_empty(GENIF_channel_t* inChannel, int inEndType)
     GENIF_channel_message_end(inChannel, ptrMsg, inEndType, GENIF_O_STORE);
   }
 
-/*----------*/
+//----------------
 
   while((ptrMsg = RLST_extractHead(inChannel->outRefTout)))
   {
@@ -603,7 +603,7 @@ GENIF_channel_empty(GENIF_channel_t* inChannel, int inEndType)
     GENIF_channel_message_end(inChannel, ptrMsg, inEndType, GENIF_W_STORE);
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->inBuffMsg != NULL)
   {
@@ -617,7 +617,7 @@ GENIF_channel_empty(GENIF_channel_t* inChannel, int inEndType)
     GENIF_channel_message_end(inChannel, ptrMsg, inEndType, GENIF_I_STORE);
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_empty() = %d", ret);
 
@@ -630,7 +630,7 @@ static int
 GENIF_channel_message_end
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg,
+  GENIF_message_t*		inMsg,
   int				inEndType,
   int				inStoreType
 )
@@ -644,18 +644,18 @@ GENIF_channel_message_end
 
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA3("Entering in GENIF_channel_message_end(%p, %d, %p)", 
           inChannel,
 	  inChannel->fd,
-	  inPtrMsg);
+	  inMsg);
 
 
-  switch(inPtrMsg->type)
+  switch(inMsg->type)
   {
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_REQUEST:
     {
@@ -782,7 +782,7 @@ GENIF_channel_message_end
       break;
     }
 	
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_RESPONSE:
     {
@@ -840,7 +840,7 @@ GENIF_channel_message_end
       break;
     }
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_MESSAGE:
     {
@@ -933,7 +933,7 @@ GENIF_channel_message_end
       break;
     }
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_UNKNOWN:
     {
@@ -985,13 +985,13 @@ GENIF_channel_message_end
     }
   }
 
-/*----------*/
+//----------------
 
   if(notify == GENIF_NOTIFY_NONE)
   {
     if(strlen(strErr) > 0) 
     {
-      GENIF_message_dump(inPtrMsg, GENIF_MAXLEN_STRING + 1, strMsg);
+      GENIF_message_dump(inMsg, GENIF_MAXLEN_STRING + 1, strMsg);
 
       SUCESO2("%s\n%s", strErr, strMsg);
     }
@@ -999,15 +999,15 @@ GENIF_channel_message_end
 
   else
   {
-    GENIF_channel_notify(inChannel, notify, inPtrMsg);
+    GENIF_channel_notify(inChannel, notify, inMsg);
   }
 
   if(delete == GENIF_TRUE)
   {
-    GENIF_message_delete(inPtrMsg);
+    GENIF_message_delete(inMsg);
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_message_end() = %d", ret);
 
@@ -1022,14 +1022,14 @@ GENIF_channel_timer_cb(GENIF_channel_t* inChannel, long inT)
 {
   long				T = inT;
 
-/*----------*/
+//----------------
 
   TRAZA3("Entering in GENIF_channel_timer_cb(%p, %d, %ld)", 
           inChannel,
 	  inChannel->fd,
 	  inT);
 
-/*----------*/
+//----------------
 
   if(inChannel->fd == -1)
   {
@@ -1038,11 +1038,11 @@ GENIF_channel_timer_cb(GENIF_channel_t* inChannel, long inT)
     inChannel->malfunctionT = T;
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_message_timeout(inChannel);
 
-/*----------*/
+//----------------
 
   if(inChannel->config->heartbeatTout > 0)
   {
@@ -1069,7 +1069,7 @@ GENIF_channel_timer_cb(GENIF_channel_t* inChannel, long inT)
     }
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->config->inactivityTout > 0)
   {
@@ -1096,7 +1096,7 @@ GENIF_channel_timer_cb(GENIF_channel_t* inChannel, long inT)
     }
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->config->malfunctionTout > 0)
   {
@@ -1116,15 +1116,15 @@ GENIF_channel_timer_cb(GENIF_channel_t* inChannel, long inT)
     }
   }
   
-/*----------*/
+//----------------
 
   inChannel->inFlowCount = 0; inChannel->outFlowCount = 0;
 
-/*----------*/
+//----------------
 
   GENIF_channel_mask(inChannel);
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_timer_cb()");
 }
@@ -1144,13 +1144,13 @@ GENIF_channel_message_timeout(GENIF_channel_t* inChannel)
 
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_message_timeout(%p, %d)", 
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if(inChannel->config->outQueueTout > 0)
   {
@@ -1174,7 +1174,7 @@ GENIF_channel_message_timeout(GENIF_channel_t* inChannel)
     }
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->config->outRefTout > 0)
   {
@@ -1201,7 +1201,7 @@ GENIF_channel_message_timeout(GENIF_channel_t* inChannel)
     }
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->config->inRefTout > 0)
   {
@@ -1225,7 +1225,7 @@ GENIF_channel_message_timeout(GENIF_channel_t* inChannel)
     }
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_message_timeout() = %d", ret);
 
@@ -1281,13 +1281,13 @@ GENIF_channel_mask(GENIF_channel_t* inChannel)
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   GENIF_channel_read_mask(inChannel);
 
   GENIF_channel_write_mask(inChannel);
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_mask()");
 }
@@ -1303,7 +1303,7 @@ GENIF_channel_read_mask(GENIF_channel_t* inChannel)
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if(inChannel->fd != -1)
   {
@@ -1330,7 +1330,7 @@ GENIF_channel_read_mask(GENIF_channel_t* inChannel)
       }
     }
 
-/*----------*/
+//----------------
 
     if(inChannel->readMask != readMask)
     {
@@ -1348,14 +1348,14 @@ GENIF_channel_read_mask(GENIF_channel_t* inChannel)
     }
   }
 
-/*----------*/
+//----------------
 
   else
   {
     inChannel->readMask = GENIF_FLAG_OFF;
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_read_mask() = %d", readMask);
 
@@ -1373,7 +1373,7 @@ GENIF_channel_write_mask(GENIF_channel_t* inChannel)
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if(inChannel->fd != -1)
   {
@@ -1413,7 +1413,7 @@ GENIF_channel_write_mask(GENIF_channel_t* inChannel)
       }
     }
 
-/*----------*/
+//----------------
 
     if(inChannel->writeMask != writeMask)
     {
@@ -1431,14 +1431,14 @@ GENIF_channel_write_mask(GENIF_channel_t* inChannel)
     }
   }
 
-/*----------*/
+//----------------
 
   else
   {
     inChannel->writeMask = GENIF_FLAG_OFF;
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_write_mask() = %d", writeMask);
 
@@ -1458,7 +1458,7 @@ GENIF_channel_close_cb
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   DEPURA1("WARNING: CHANNEL (%d) CLOSED BY PEER", inChannel->fd);
 
@@ -1471,7 +1471,7 @@ GENIF_channel_close_cb
 
   GENIF_channel_notify(inChannel, GENIF_NOTIFY_CHANNEL_CLOSED, NULL);
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_close_cb()");
 }
@@ -1490,7 +1490,7 @@ GENIF_channel_error_cb
 	  inChannel->fd,
           inError);
 
-/*----------*/
+//----------------
 
   SUCESO2("ERROR: CHANNEL (%d) ERROR (%d)", inChannel->fd, inError);
 
@@ -1503,7 +1503,7 @@ GENIF_channel_error_cb
 
   GENIF_channel_notify(inChannel, GENIF_NOTIFY_CHANNEL_ERROR, NULL);
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_error_cb()");
 }
@@ -1512,9 +1512,9 @@ GENIF_channel_error_cb
 /*----------------------------------------------------------------------------*/
 
 static void
-GENIF_channel_read_cb(int inFd, void* inPtrVoidChn)
+GENIF_channel_read_cb(int inFd, void* inVoidChn)
 {
-  GENIF_channel_t*		inChannel = inPtrVoidChn;
+  GENIF_channel_t*		inChannel = inVoidChn;
   
   GENIF_message_t*		ptrMsg = NULL;
 
@@ -1527,7 +1527,7 @@ GENIF_channel_read_cb(int inFd, void* inPtrVoidChn)
 
   TRAZA2("Entering in GENIF_channel_read_cb(%p, %d)", inChannel, inFd);
 
-/*----------*/
+//----------------
 
   readLen = GENIF_MAXLEN_READ_BUFFER - inChannel->inBuffLen;
 
@@ -1553,7 +1553,7 @@ GENIF_channel_read_cb(int inFd, void* inPtrVoidChn)
     inChannel->inBuffLen += readLen;
   }
 
-/*----------*/
+//----------------
 
   while(inChannel->inBuffLen > 0 && decodeEnd == GENIF_FALSE)
   {
@@ -1604,7 +1604,7 @@ GENIF_channel_read_cb(int inFd, void* inPtrVoidChn)
     }
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->inBuffLen >= GENIF_MAXLEN_READ_BUFFER)
   {
@@ -1626,7 +1626,7 @@ GENIF_channel_read_cb(int inFd, void* inPtrVoidChn)
     inChannel->inBuffIdx = 0;
   }
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_read_cb()");
 }
@@ -1637,7 +1637,7 @@ static void
 GENIF_channel_process_in_msg_cb
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 )
 {
   GENIF_message_t*		ptrMsg = NULL;
@@ -1646,16 +1646,16 @@ GENIF_channel_process_in_msg_cb
 
   int				rc;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_process_in_msg_cb(%p, %p)",
           inChannel,
-	  inPtrMsg);
+	  inMsg);
 
-  switch(inPtrMsg->type)
+  switch(inMsg->type)
   {
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_REQUEST:
     {
@@ -1663,53 +1663,53 @@ GENIF_channel_process_in_msg_cb
 
       inChannel->counter->inRequest++;
 
-      inPtrMsg->T = time(NULL);
+      inMsg->T = time(NULL);
 
-      rc = RLST_insertTail(inChannel->inRef, inPtrMsg);
+      rc = RLST_insertTail(inChannel->inRef, inMsg);
 
       if(rc != RLST_RC_OK)
       {
 	GENIF_FATAL("ERROR: RLST_insertTail()");
       }
 
-      GENIF_channel_notify(inChannel, GENIF_NOTIFY_REQUEST_RECEIVED, inPtrMsg);
+      GENIF_channel_notify(inChannel, GENIF_NOTIFY_REQUEST_RECEIVED, inMsg);
 
       break;
     }
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_RESPONSE:
     {
       inChannel->counter->inResponse++;
 
-      ptrMsg = RFTR_find(inChannel->outRef, inPtrMsg, NULL, NULL);
+      ptrMsg = RFTR_find(inChannel->outRef, inMsg, NULL, NULL);
 
       if(ptrMsg != NULL)
       {
 	RFTR_extract(inChannel->outRef,     ptrMsg);
 	RLST_extract(inChannel->outRefTout, ptrMsg);
 
-	GENIF_message_resp_copy(ptrMsg, inPtrMsg);
+	GENIF_message_resp_copy(ptrMsg, inMsg);
 
 	GENIF_channel_notify(inChannel, GENIF_NOTIFY_RESPONSE_RECEIVED, ptrMsg);
       }
 
       else
       {
-        GENIF_message_dump(inPtrMsg, GENIF_MAXLEN_STRING + 1, strMsg);
+        GENIF_message_dump(inMsg, GENIF_MAXLEN_STRING + 1, strMsg);
 	
 	SUCESO1("ERROR: REQUEST NOT FOUND FOR RESPONSE:\n%s", strMsg);
 
 	inChannel->counter->inResponseError++;
       }
 
-      GENIF_message_delete(inPtrMsg);
+      GENIF_message_delete(inMsg);
 
       break;
     }
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_MESSAGE:
     {
@@ -1717,21 +1717,21 @@ GENIF_channel_process_in_msg_cb
 
       inChannel->counter->inMessage++;
 
-      inPtrMsg->T = time(NULL);
+      inMsg->T = time(NULL);
 
-      rc = RLST_insertTail(inChannel->inRef, inPtrMsg);
+      rc = RLST_insertTail(inChannel->inRef, inMsg);
 
       if(rc != RLST_RC_OK)
       {
 	GENIF_FATAL("ERROR: RLST_insertTail()");
       }
 
-      GENIF_channel_notify(inChannel, GENIF_NOTIFY_MESSAGE_RECEIVED, inPtrMsg);
+      GENIF_channel_notify(inChannel, GENIF_NOTIFY_MESSAGE_RECEIVED, inMsg);
 
       break;
     }
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_UNKNOWN:
     {
@@ -1739,25 +1739,25 @@ GENIF_channel_process_in_msg_cb
 
       inChannel->counter->inUnknownMsg++;
 
-      inPtrMsg->T = time(NULL);
+      inMsg->T = time(NULL);
 
-      rc = RLST_insertTail(inChannel->inRef, inPtrMsg);
+      rc = RLST_insertTail(inChannel->inRef, inMsg);
 
       if(rc != RLST_RC_OK)
       {
 	GENIF_FATAL("ERROR: RLST_insertTail()");
       }
 
-      GENIF_channel_notify(inChannel, GENIF_NOTIFY_UNKNOWN_RECEIVED, inPtrMsg);
+      GENIF_channel_notify(inChannel, GENIF_NOTIFY_UNKNOWN_RECEIVED, inMsg);
 
       break;
     }
 
-/*----------*/
+//----------------
 
     default:
     {
-      SUCESO1("ERROR: RECEIVED UNKNOWN MESSAGE TYPE (%d)", inPtrMsg->type);
+      SUCESO1("ERROR: RECEIVED UNKNOWN MESSAGE TYPE (%d)", inMsg->type);
 
       inChannel->counter->inUnknownMsg++;
       
@@ -1765,7 +1765,7 @@ GENIF_channel_process_in_msg_cb
     }
   }
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_process_in_msg_cb()");
 }
@@ -1774,9 +1774,9 @@ GENIF_channel_process_in_msg_cb
 /*----------------------------------------------------------------------------*/
 
 static void
-GENIF_channel_write_cb(int inFd, void* inPtrVoidChn)
+GENIF_channel_write_cb(int inFd, void* inVoidChn)
 {
-  GENIF_channel_t*		inChannel = inPtrVoidChn;
+  GENIF_channel_t*		inChannel = inVoidChn;
   
   GENIF_message_t*		ptrMsg = NULL;
 
@@ -1788,7 +1788,7 @@ GENIF_channel_write_cb(int inFd, void* inPtrVoidChn)
 
   TRAZA2("Entering in GENIF_channel_write_cb(%p, %d)", inChannel, inFd);
 
-/*----------*/
+//----------------
 
   while(writeEnd == GENIF_FALSE)
   {
@@ -1814,7 +1814,7 @@ GENIF_channel_write_cb(int inFd, void* inPtrVoidChn)
       else { inChannel->outBuffMsg = RLST_extractHead(inChannel->outQueue); }
     }
 
-/*----------*/
+//----------------
 
     if((inChannel->outBuffLen == 0) && (inChannel->outBuffMsg != NULL))
     {
@@ -1873,7 +1873,7 @@ GENIF_channel_write_cb(int inFd, void* inPtrVoidChn)
       }
     }
 
-/*----------*/
+//----------------
 
     if((inChannel->outBuffLen != 0) && (inChannel->outBuffMsg != NULL))
     {
@@ -1927,7 +1927,7 @@ GENIF_channel_write_cb(int inFd, void* inPtrVoidChn)
       }
     }
 
-/*----------*/
+//----------------
 
     if((inChannel->outBuffLen == 0) && (inChannel->outBuffMsg != NULL))
     {
@@ -1936,7 +1936,7 @@ GENIF_channel_write_cb(int inFd, void* inPtrVoidChn)
       GENIF_channel_process_out_msg_cb(inChannel, ptrMsg);
     }
 
-/*----------*/
+//----------------
 
     GENIF_channel_mask(inChannel);
 
@@ -1946,7 +1946,7 @@ GENIF_channel_write_cb(int inFd, void* inPtrVoidChn)
     }
   }
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_write_cb()");
 }
@@ -1957,23 +1957,23 @@ static void
 GENIF_channel_process_out_msg_cb
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 )
 {
   long				T = time(NULL);
 
   int				rc;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_process_out_msg_cb(%p, %p)",
           inChannel,
-	  inPtrMsg);
+	  inMsg);
 
-  switch(inPtrMsg->type)
+  switch(inMsg->type)
   {
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_REQUEST:
     {
@@ -1981,56 +1981,56 @@ GENIF_channel_process_out_msg_cb
 
       inChannel->counter->winRequest++;
 
-      inPtrMsg->T = T;
+      inMsg->T = T;
 
-      rc = RFTR_insert(inChannel->outRef, inPtrMsg);
+      rc = RFTR_insert(inChannel->outRef, inMsg);
       
       if(rc != RLST_RC_OK)
       {
 	GENIF_FATAL("ERROR: RFTR_insert()");
       }
 
-      rc = RLST_insertTail(inChannel->outRefTout, inPtrMsg);
+      rc = RLST_insertTail(inChannel->outRefTout, inMsg);
 
       if(rc != RLST_RC_OK)
       {
 	GENIF_FATAL("ERROR: RLST_insertTail()");
       }
 
-      GENIF_channel_notify(inChannel, GENIF_NOTIFY_REQUEST_SENT, inPtrMsg);
+      GENIF_channel_notify(inChannel, GENIF_NOTIFY_REQUEST_SENT, inMsg);
 
       break;
     }
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_RESPONSE:
     {
-      GENIF_channel_notify(inChannel, GENIF_NOTIFY_RESPONSE_SENT, inPtrMsg);
+      GENIF_channel_notify(inChannel, GENIF_NOTIFY_RESPONSE_SENT, inMsg);
 
-      GENIF_message_delete(inPtrMsg);
+      GENIF_message_delete(inMsg);
 
       break;
     }
 
-/*----------*/
+//----------------
 
     case GENIF_MESSAGE_TYPE_MESSAGE:
     {
       inChannel->outFlowCount++;
 
-      inPtrMsg->T = T;
+      inMsg->T = T;
 
-      GENIF_channel_notify(inChannel, GENIF_NOTIFY_MESSAGE_SENT, inPtrMsg);
+      GENIF_channel_notify(inChannel, GENIF_NOTIFY_MESSAGE_SENT, inMsg);
 
       break;
     }
 
-/*----------*/
+//----------------
 
     default:
     {
-      SUCESO1("ERROR: SENDING UNKNOWN MESSAGE TYPE (%d)", inPtrMsg->type);
+      SUCESO1("ERROR: SENDING UNKNOWN MESSAGE TYPE (%d)", inMsg->type);
 
       inChannel->counter->outUnknownMsg++;
       
@@ -2038,7 +2038,7 @@ GENIF_channel_process_out_msg_cb
     }
   }
 
-/*----------*/
+//----------------
 
   TRAZA0("Returning from GENIF_channel_process_out_msg_cb()");
 }
@@ -2051,21 +2051,21 @@ GENIF_channel_external_queue(GENIF_channel_t* inChannel, int inFlag)
 {
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA3("Entering in GENIF_channel_external_queue(%p, %d, %d)", 
           inChannel,
 	  inChannel->fd,
 	  inFlag);
 
-/*----------*/
+//----------------
 
   if(inChannel->extQueueFlag != inFlag)
   {
     inChannel->extQueueFlag = inFlag; GENIF_channel_mask(inChannel);
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_external_queue() = %d", ret);
 
@@ -2078,7 +2078,7 @@ int
 GENIF_channel_send
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 )
 {
   long				T = time(NULL);
@@ -2087,18 +2087,18 @@ GENIF_channel_send
   
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA3("Entering in GENIF_channel_send(%p, %d, %p)", 
           inChannel,
 	  inChannel->fd,
-	  inPtrMsg);
+	  inMsg);
 
-/*----------*/
+//----------------
 
   inChannel->counter->outMessage++;
 
-/*----------*/
+//----------------
 
   if(inChannel->config->outQueueMax > 0)
   {
@@ -2112,15 +2112,15 @@ GENIF_channel_send
     }
   }
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
-    inPtrMsg->type    = GENIF_MESSAGE_TYPE_MESSAGE;
-    inPtrMsg->channel = inChannel;
-    inPtrMsg->T       = T;
+    inMsg->type    = GENIF_MESSAGE_TYPE_MESSAGE;
+    inMsg->channel = inChannel;
+    inMsg->T       = T;
 
-    rc = RLST_insertTail(inChannel->outQueue, inPtrMsg);
+    rc = RLST_insertTail(inChannel->outQueue, inMsg);
 
     if(rc != RLST_RC_OK)
     {
@@ -2128,11 +2128,11 @@ GENIF_channel_send
     }
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_mask(inChannel);
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_send() = %d", ret);
 
@@ -2145,7 +2145,7 @@ int
 GENIF_channel_request
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 )
 {
   long				T = time(NULL);
@@ -2154,18 +2154,18 @@ GENIF_channel_request
   
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA3("Entering in GENIF_channel_request(%p, %d, %p)", 
           inChannel,
 	  inChannel->fd,
-	  inPtrMsg);
+	  inMsg);
 
-/*----------*/
+//----------------
 
   inChannel->counter->outRequest++;
 
-/*----------*/
+//----------------
 
   if(inChannel->config->outQueueMax > 0)
   {
@@ -2179,15 +2179,15 @@ GENIF_channel_request
     }
   }
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_OK)
   {
-    inPtrMsg->type    = GENIF_MESSAGE_TYPE_REQUEST;
-    inPtrMsg->channel = inChannel;
-    inPtrMsg->T       = T;
+    inMsg->type    = GENIF_MESSAGE_TYPE_REQUEST;
+    inMsg->channel = inChannel;
+    inMsg->T       = T;
 
-    rc = RLST_insertTail(inChannel->outQueue, inPtrMsg);
+    rc = RLST_insertTail(inChannel->outQueue, inMsg);
 
     if(rc != RLST_RC_OK)
     {
@@ -2195,11 +2195,11 @@ GENIF_channel_request
     }
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_mask(inChannel);
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_request() = %d", ret);
 
@@ -2212,7 +2212,7 @@ int
 GENIF_channel_reply
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 )
 {
   long				T = time(NULL);
@@ -2223,20 +2223,20 @@ GENIF_channel_reply
   
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA3("Entering in GENIF_channel_reply(%p, %d, %p)", 
           inChannel,
 	  inChannel->fd,
-	  inPtrMsg);
+	  inMsg);
 
-/*----------*/
+//----------------
 
   inChannel->counter->outResponse++;
 
-/*----------*/
+//----------------
 
-  ptrMsg = RLST_extract(inChannel->inRef, inPtrMsg);
+  ptrMsg = RLST_extract(inChannel->inRef, inMsg);
 
   if(ptrMsg == NULL)
   {
@@ -2245,11 +2245,11 @@ GENIF_channel_reply
 
   else
   {
-    inPtrMsg->type    = GENIF_MESSAGE_TYPE_RESPONSE;
-    inPtrMsg->channel = inChannel;
-    inPtrMsg->T       = T;
+    inMsg->type    = GENIF_MESSAGE_TYPE_RESPONSE;
+    inMsg->channel = inChannel;
+    inMsg->T       = T;
 	
-    rc = RLST_insertTail(inChannel->outQueue, inPtrMsg);
+    rc = RLST_insertTail(inChannel->outQueue, inMsg);
 
     if(rc != RLST_RC_OK)
     {
@@ -2257,11 +2257,11 @@ GENIF_channel_reply
     }
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_mask(inChannel);
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_reply() = %d", ret);
 
@@ -2279,13 +2279,13 @@ GENIF_channel_get_any_msg
 {
   GENIF_message_t*		ptrMsg = NULL;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_get_any_msg(%p, %d)", 
           inChannel,
 	  inChannel->fd);
 
-/*----------*/
+//----------------
 
   if((ptrMsg = RLST_getHead(inChannel->outQueue)) != NULL)
   {
@@ -2312,7 +2312,7 @@ GENIF_channel_get_any_msg
     ptrMsg = NULL;
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_get_any_msg() = %p", ptrMsg);
 
@@ -2322,35 +2322,35 @@ GENIF_channel_get_any_msg
 /*----------------------------------------------------------------------------*/
 
 int
-GENIF_channel_acquire_msg
+GENIF_channel_unref_msg
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 )
 {
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
-  TRAZA3("Entering in GENIF_channel_acquire_msg(%p, %d, %p)", 
+  TRAZA3("Entering in GENIF_channel_unref_msg(%p, %d, %p)",
           inChannel,
 	  inChannel->fd,
-	  inPtrMsg);
+	  inMsg);
 
-/*----------*/
+//----------------
 
-  if(RLST_extract(inChannel->inRef, inPtrMsg) == NULL)
+  if(RLST_extract(inChannel->inRef, inMsg) == NULL)
   {
     ret = GENIF_RC_NOT_FOUND;
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_mask(inChannel);
 
-/*----------*/
+//----------------
 
-  TRAZA1("Returning from GENIF_channel_acquire_msg() = %d", ret);
+  TRAZA1("Returning from GENIF_channel_unref_msg() = %d", ret);
 
   return ret;
 }
@@ -2361,7 +2361,7 @@ int
 GENIF_channel_cancel_msg
 (
   GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inPtrMsg,
+  GENIF_message_t*		inMsg,
   int*				outStore
 )
 {
@@ -2373,34 +2373,34 @@ GENIF_channel_cancel_msg
 
   int				ret = GENIF_RC_OK;
 
-/*----------*/
+//----------------
 
   TRAZA3("Entering in GENIF_channel_cancel_msg(%p, %d, %p)", 
           inChannel,
 	  inChannel->fd,
-	  inPtrMsg);
+	  inMsg);
 
-/*----------*/
+//----------------
 
-  if(inPtrMsg == inChannel->outBuffMsg)
+  if(inMsg == inChannel->outBuffMsg)
   {
     ptrM1 = inChannel->outBuffMsg;
 
     inChannel->outBuffMsg = NULL; inChannel->outBuffLen = 0;
   }
   
-  ptrM2 = RLST_extract(inChannel->outQueue,   inPtrMsg);
-  ptrM3 = RFTR_extract(inChannel->outRef,     inPtrMsg);
-  ptrM4 = RLST_extract(inChannel->outRefTout, inPtrMsg);
-  ptrM5 = RLST_extract(inChannel->inRef,      inPtrMsg);
+  ptrM2 = RLST_extract(inChannel->outQueue,   inMsg);
+  ptrM3 = RFTR_extract(inChannel->outRef,     inMsg);
+  ptrM4 = RLST_extract(inChannel->outRefTout, inMsg);
+  ptrM5 = RLST_extract(inChannel->inRef,      inMsg);
 
-/*----------*/
+//----------------
 
   if(ptrM1 != NULL)
   {
     *outStore = GENIF_O_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inPtrMsg,
+    ret = GENIF_channel_message_end(inChannel, inMsg,
                                     GENIF_END_USER, *outStore);
   }
 
@@ -2408,7 +2408,7 @@ GENIF_channel_cancel_msg
   {
     *outStore = GENIF_O_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inPtrMsg,
+    ret = GENIF_channel_message_end(inChannel, inMsg,
                                     GENIF_END_USER, *outStore);
   }
 
@@ -2416,7 +2416,7 @@ GENIF_channel_cancel_msg
   {
     *outStore = GENIF_W_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inPtrMsg,
+    ret = GENIF_channel_message_end(inChannel, inMsg,
                                     GENIF_END_USER, *outStore);
   }
 
@@ -2424,7 +2424,7 @@ GENIF_channel_cancel_msg
   {
     *outStore = GENIF_I_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inPtrMsg,
+    ret = GENIF_channel_message_end(inChannel, inMsg,
                                     GENIF_END_USER, *outStore);
   }
 
@@ -2433,11 +2433,11 @@ GENIF_channel_cancel_msg
     ret = GENIF_RC_NOT_FOUND;
   }
 
-/*----------*/
+//----------------
 
   GENIF_channel_mask(inChannel);
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_cancel_msg() = %d", ret);
 
@@ -2458,14 +2458,14 @@ GENIF_channel_message_num
   long				num;
   long				ret = 0;
 
-/*----------*/
+//----------------
 
   TRAZA2("Entering in GENIF_channel_message_num(%p, %d)", 
           inChannel,
 	  inChannel->fd);
 
 
-/*----------*/
+//----------------
 
   if(inChannel->outQueue != NULL)
   {
@@ -2497,7 +2497,7 @@ GENIF_channel_message_num
     ret += 1;
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->outRef != NULL)
   {
@@ -2519,7 +2519,7 @@ GENIF_channel_message_num
     }
   }
 
-/*----------*/
+//----------------
 
   if(inChannel->inRef != NULL)
   {
@@ -2541,7 +2541,7 @@ GENIF_channel_message_num
     }
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_channel_message_num() = %ld", ret);
 
@@ -2556,12 +2556,12 @@ GENIF_channel_notify
 (
   GENIF_channel_t*		inChannel,
   int				inNotify,
-  GENIF_message_t*		inPtrMsg
+  GENIF_message_t*		inMsg
 )
 {
   inChannel->notDelete = GENIF_TRUE;
 
-  inChannel->cbNotify(inChannel, inNotify, inPtrMsg);
+  inChannel->cbNotify(inChannel, inNotify, inMsg);
 
   inChannel->notDelete = GENIF_FALSE;
 }

@@ -203,7 +203,7 @@ struct JSON_object_tag
 //----------------
 
 int JSON_initialize(void);
-
+void JSON_memo_view(void);
 //----------------
 
 JSON_map_t* JSON_map_new(void);

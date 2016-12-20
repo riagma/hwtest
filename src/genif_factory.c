@@ -20,30 +20,6 @@ ______________________________________________________________________________*/
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <libgen.h>
-#include <limits.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <signal.h>
-#include <string.h>
-#include <sys/time.h>
-#include <stdarg.h>
-#include <setjmp.h>
-
-#ifndef __hpux
-#include <sys/select.h>
-#endif
-
-#include <sys/times.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/utsname.h>
 
 /*__INCLUDES DE LA BD_________________________________________________________*/
 
@@ -51,7 +27,6 @@ ______________________________________________________________________________*/
 
 #include "trace_macros_gnif.h"
 #include "auxfunctions.h"
-
 #include "genif.h"
 
 /*__CONSTANTES________________________________________________________________*/
@@ -120,7 +95,7 @@ static long			a_ServerCounter = 0;
 
 /*----------*/
 
-static struct Timer*		a_DeleterTimer = NULL;
+static uv_timer_t		a_DeleterTimer[1];
 
 /*----------*/
 
@@ -132,7 +107,7 @@ static struct Timer*		a_DeleterTimer = NULL;
 
 /*----------*/
 
-static void GENIF_deleter_timer_cb(const struct Timer* inPtrTimer);
+static void GENIF_deleter_timer_cb(uv_timer_t* inTimer);
 
 /*----------*/
 
@@ -210,11 +185,14 @@ GENIF_factory_initialize(void)
 
 /*----------*/
 
-    a_DeleterTimer = setTimer(1, GENIF_deleter_timer_cb, NULL);
+	if(uv_timer_init(uv_default_loop(), a_DeleterTimer) < 0)
+	{
+	  GENIF_FATAL0("FATAL: uv_timer_init()");
+	}
 
-    if(a_DeleterTimer == NULL)
+	if(uv_timer_start(a_DeleterTimer, GENIF_deleter_timer_cb, 1000, 1000) < 0)
     {
-      GENIF_FATAL("ERROR: setTimer()");
+      GENIF_FATAL0("FATAL: uv_timer_start()");
     }
 
 /*----------*/
@@ -243,28 +221,24 @@ GENIF_factoty_memo_view()
 /*----------------------------------------------------------------------------*/
 
 static void
-GENIF_deleter_timer_cb(const struct Timer* inPtrTimer)
+GENIF_deleter_timer_cb(uv_timer_t* inTimer)
 {
-//long				T = inPtrTimer->tv.tv_sec;
-
   GENIF_message_t*		ptrMessage;
   GENIF_channel_t*		ptrChannel;
 
   GENIF_client_t*		ptrClient;
   GENIF_server_t*		ptrServer;
 
-  TRAZA1("Entering in GENIF_deleter_timer_cb(%ld)", inPtrTimer->tv.tv_sec);
+  TRAZA0("Entering in GENIF_deleter_timer_cb()");
 
-/*----------*/
+//----------------
 
-  a_DeleterTimer = setTimer(100, GENIF_deleter_timer_cb, NULL);
-
-  if(a_DeleterTimer == NULL)
+  if(uv_timer_again(inTimer) < 0)
   {
-    GENIF_FATAL("ERROR: setTimer()");
+    GENIF_FATAL0("ERROR: setTimer()");
   }
 
-/*----------*/
+//----------------
 
   RLST_resetGet(a_MessageDelete, NULL);
 
@@ -329,7 +303,7 @@ GENIF_deleter_timer_cb(const struct Timer* inPtrTimer)
 /*----------------------------------------------------------------------------*/
 
 GENIF_message_t* 
-GENIF_message_new(GENIF_modifier_t* inPtrModifier)
+GENIF_message_new(GENIF_modifier_t* inModifier)
 {
   GENIF_message_t*		ptrMessage = NULL;
 
@@ -348,7 +322,7 @@ GENIF_message_new(GENIF_modifier_t* inPtrModifier)
 
 /*----------*/
 
-  ptrMessage->modifier = inPtrModifier;
+  ptrMessage->modifier = inModifier;
 
   ptrMessage->modMsg = ptrMessage->modifier->message_new(ptrMessage);
 
@@ -367,15 +341,15 @@ GENIF_message_new(GENIF_modifier_t* inPtrModifier)
 /*----------------------------------------------------------------------------*/
 
 void
-GENIF_message_delete(GENIF_message_t* inPtrMessage)
+GENIF_message_delete(GENIF_message_t* inMessage)
 {
-  TRAZA1("Entering in GENIF_message_delete(%p)", inPtrMessage);
+  TRAZA1("Entering in GENIF_message_delete(%p)", inMessage);
 
 /*----------*/
 
-  if(inPtrMessage->notDelete == GENIF_TRUE)
+  if(inMessage->notDelete == GENIF_TRUE)
   {
-    if(RLST_insertTail(a_MessageDelete, inPtrMessage) < 0)
+    if(RLST_insertTail(a_MessageDelete, inMessage) < 0)
     {
       GENIF_FATAL("ERROR: RLST_insertTail()");
     }
@@ -383,9 +357,9 @@ GENIF_message_delete(GENIF_message_t* inPtrMessage)
 
   else
   {
-    inPtrMessage->modifier->message_delete(inPtrMessage->modMsg);
+    inMessage->modifier->message_delete(inMessage->modMsg);
 
-    MEMO_delete(a_MessageMemo, inPtrMessage);
+    MEMO_delete(a_MessageMemo, inMessage);
 
     a_MessageCounter--;
   }
@@ -426,15 +400,15 @@ GENIF_channel_new(void)
 /*----------------------------------------------------------------------------*/
 
 void 
-GENIF_channel_delete(GENIF_channel_t* inPtrChannel)
+GENIF_channel_delete(GENIF_channel_t* inChannel)
 {
-  TRAZA1("Entering in GENIF_channel_delete(%p)", inPtrChannel);
+  TRAZA1("Entering in GENIF_channel_delete(%p)", inChannel);
 
 /*----------*/
 
-  if(inPtrChannel->notDelete == GENIF_TRUE)
+  if(inChannel->notDelete == GENIF_TRUE)
   {
-    if(RLST_insertTail(a_ChannelDelete, inPtrChannel) < 0)
+    if(RLST_insertTail(a_ChannelDelete, inChannel) < 0)
     {
       GENIF_FATAL("ERROR: RLST_insertTail()");
     }
@@ -442,7 +416,7 @@ GENIF_channel_delete(GENIF_channel_t* inPtrChannel)
 
   else
   {
-    MEMO_delete(a_ChannelMemo, inPtrChannel);
+    MEMO_delete(a_ChannelMemo, inChannel);
 
     a_ChannelCounter--;
   }
@@ -485,15 +459,15 @@ GENIF_client_new(void)
 /*----------------------------------------------------------------------------*/
 
 void 
-GENIF_client_delete(GENIF_client_t* inPtrClient)
+GENIF_client_delete(GENIF_client_t* inClient)
 {
-  TRAZA1("Entering in GENIF_client_delete(%p)", inPtrClient);
+  TRAZA1("Entering in GENIF_client_delete(%p)", inClient);
 
 /*----------*/
 
-  if(inPtrClient->notDelete == GENIF_TRUE)
+  if(inClient->notDelete == GENIF_TRUE)
   {
-    if(RLST_insertTail(a_ClientDelete, inPtrClient) < 0)
+    if(RLST_insertTail(a_ClientDelete, inClient) < 0)
     {
       GENIF_FATAL("ERROR: RLST_insertTail()");
     }
@@ -501,7 +475,7 @@ GENIF_client_delete(GENIF_client_t* inPtrClient)
 
   else
   {
-    MEMO_delete(a_ClientMemo, inPtrClient);
+    MEMO_delete(a_ClientMemo, inClient);
 
     a_ClientCounter--;
   }
@@ -544,15 +518,15 @@ GENIF_server_new(void)
 /*----------------------------------------------------------------------------*/
 
 void 
-GENIF_server_delete(GENIF_server_t* inPtrServer)
+GENIF_server_delete(GENIF_server_t* inServer)
 {
-  TRAZA1("Entering in GENIF_server_delete(%p)", inPtrServer);
+  TRAZA1("Entering in GENIF_server_delete(%p)", inServer);
 
 /*----------*/
 
-  if(inPtrServer->notDelete == GENIF_TRUE)
+  if(inServer->notDelete == GENIF_TRUE)
   {
-    if(RLST_insertTail(a_ServerDelete, inPtrServer) < 0)
+    if(RLST_insertTail(a_ServerDelete, inServer) < 0)
     {
       GENIF_FATAL("ERROR: RLST_insertTail()");
     }
@@ -560,7 +534,7 @@ GENIF_server_delete(GENIF_server_t* inPtrServer)
 
   else
   {
-    MEMO_delete(a_ServerMemo, inPtrServer);
+    MEMO_delete(a_ServerMemo, inServer);
 
     a_ServerCounter--;
   }

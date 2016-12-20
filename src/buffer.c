@@ -384,12 +384,12 @@ BUFF_part_delete(BUFF_buff_t* inBuff, BUFF_part_t* inPart)
 	  ptrElem->next->prev = ptrElem->prev;
 	}
 
-	if(inBuff->head != ptrElem)
+	if(inBuff->head == ptrElem)
 	{
 	  inBuff->head = ptrElem->next;
 	}
 
-	if(inBuff->tail != ptrElem)
+	if(inBuff->tail == ptrElem)
 	{
 	  inBuff->tail = ptrElem->prev;
 	}
@@ -449,6 +449,8 @@ BUFF_part_add(BUFF_buff_t* inBuff, BUFF_part_t* inPart)
 
 //----------------
 
+    inPart->refs++;
+
     ptrElem->part = inPart;
 
     if(inBuff->tail == NULL)
@@ -457,7 +459,7 @@ BUFF_part_add(BUFF_buff_t* inBuff, BUFF_part_t* inPart)
       inBuff->tail = ptrElem;
     }
 
-    else // if(inBuff->tail == NULL)
+    else // if(inBuff->tail != NULL)
     {
       inBuff->tail->next = ptrElem;
       ptrElem->prev = inBuff->tail;

@@ -20,30 +20,6 @@ ______________________________________________________________________________*/
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <libgen.h>
-#include <limits.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <signal.h>
-#include <string.h>
-#include <sys/time.h>
-#include <stdarg.h>
-#include <setjmp.h>
-
-#ifndef __hpux
-#include <sys/select.h>
-#endif
-
-#include <sys/times.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/utsname.h>
 
 /*__INCLUDES DE LA BD_________________________________________________________*/
 
@@ -51,12 +27,11 @@ ______________________________________________________________________________*/
 
 #include "trace_macros_gnif.h"
 #include "auxfunctions.h"
-
 #include "genif.h"
 
 /*__CONSTANTES________________________________________________________________*/
   
-/*----------*/
+//----------------
 
 const char* a_GENIF_CHANNEL_TYPE[] =
 {
@@ -67,7 +42,7 @@ const char* a_GENIF_CHANNEL_TYPE[] =
   ""
 };
 
-/*----------*/
+//----------------
 
 const char* a_GENIF_MESSAGE_TYPE[] =
 {
@@ -79,7 +54,7 @@ const char* a_GENIF_MESSAGE_TYPE[] =
   ""
 };
 
-/*----------*/
+//----------------
 
 const char* GENIF_notify_name[] =
 {
@@ -139,7 +114,7 @@ const char* GENIF_notify_name[] =
   ""
 };
 
-/*----------*/
+//----------------
 
 /*__TIPOS_____________________________________________________________________*/
 
@@ -149,11 +124,11 @@ const char* GENIF_notify_name[] =
 
 /*__VARIABLES LOCALES_________________________________________________________*/
 
-/*----------*/
+//----------------
 
 static void (*a_fatal_error_function)(const char*) = NULL;
 
-/*----------*/
+//----------------
 
 /*__FUNCIONES EXTERNAS________________________________________________________*/
 
@@ -176,11 +151,11 @@ GENIF_message_cmp(void* inPtrMsgA, void* inPtrMsgB)
 
 //TRAZA2("Entering in GENIF_message_cmp(%p, %p)", inPtrMsgA, inPtrMsgB);
 
-/*----------*/
+//----------------
 
   cmp = ptrMsgA->modifier->message_cmp(ptrMsgA->modMsg, ptrMsgB->modMsg);
 
-/*----------*/
+//----------------
 
 //TRAZA1("Returning from GENIF_message_cmp() = %d", cmp);
 
@@ -205,11 +180,11 @@ GENIF_message_encode
 
   TRAZA1("Entering in GENIF_message_encode(%p)", inPtrMsg);
 
-/*----------*/
+//----------------
 
   GENIF_message_view(inPtrMsg, 3);
 
-/*----------*/
+//----------------
 
   ret = inPtrMsg->modifier->message_encode(inPtrMsg->modMsg,
                                            inPtrMsg->type, 
@@ -217,7 +192,7 @@ GENIF_message_encode
 					   outPtrBuff, 
 					   outPtrLen);
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_ERROR)
   {
@@ -233,7 +208,7 @@ GENIF_message_encode
     DEPURA1("ENCODE MESSAGE:\n%s", buff);
   }
   
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_message_encode() = %d", ret);
 
@@ -257,7 +232,7 @@ GENIF_message_decode
 
   TRAZA1("Entering in GENIF_message_decode(%p)", inPtrMsg);
 
-/*----------*/
+//----------------
     
   if(TRACE_level_get(TRACE_TYPE_DEFAULT) == 3)
   {
@@ -266,14 +241,14 @@ GENIF_message_decode
     DEPURA1("DECODE MESSAGE:\n%s", buff);
   }
 
-/*----------*/
+//----------------
 
   ret = inPtrMsg->modifier->message_decode(inPtrMsg->modMsg, 
                                            inPtrBuff, 
 					   inBuffLen, 
 					   outPtrLen, &inPtrMsg->type);
 
-/*----------*/
+//----------------
 
   if(ret == GENIF_RC_ERROR)
   {
@@ -287,7 +262,7 @@ GENIF_message_decode
     GENIF_message_view(inPtrMsg, 3);
   }
 
-/*----------*/
+//----------------
 
   TRAZA1("Returning from GENIF_message_decode() = %d", ret);
 
@@ -342,17 +317,27 @@ GENIF_set_fatal_error(void (*inFatalError)(const char*))
 /*----------------------------------------------------------------------------*/
 
 void
-GENIF_fatal_error(char* inFile, int inLine, const char* inErrorStr)
+GENIF_fatal_error(char* inFile, int inLine, const char* inErrorStr, ...)
 {
-  TRACE_write(TRACE_TYPE_DEFAULT, 0, "<%s %d> %s", 
-              inFile, 
-	      inLine, 
-	      inErrorStr);
+  va_list		list;
 
-  if(a_fatal_error_function)
-  {
-    a_fatal_error_function(inErrorStr);
-  }
+  char			errorStr[GENIF_MAXLEN_STRING + 1];
+
+//----------------
+
+  va_start(list, inErrorStr);
+
+  vsnprintf(errorStr, GENIF_MAXLEN_STRING + 1, inErrorStr, list);
+
+  va_end(list);
+
+  errorStr[GENIF_MAXLEN_STRING] = 0;
+
+//----------------
+
+  TRACE_write(TRACE_TYPE_DEFAULT, 0, "<%s %04d> %s", inFile, inLine, errorStr);
+
+//----------------
 
   exit(-1);
 }

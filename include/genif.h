@@ -224,7 +224,7 @@ struct GENIF_message_tag
   GENIF_channel_t*		channel;
   GENIF_modifier_t*		modifier;
   
-  long				T;
+  long					T;
   unsigned long			O;
 
   int				notDelete;
@@ -310,6 +310,8 @@ typedef struct GENIF_channel_counter_tag
 struct GENIF_channel_tag
 {
   uv_loop_t*		loop;
+  uv_tcp_t 			channel[1];
+  uv_connect_t		connreq[1];
 
   int				fd;
   int				type;
@@ -410,14 +412,14 @@ struct GENIF_client_tag
 {
   uv_loop_t*		loop;
 
-  char				remoteHost[GENIF_MAXLEN_HOST + 1];
-  int				remotePort;
+  char				remHost[GENIF_MAXLEN_HOST + 1];
+  int				remPort;
 
-  int				localHP;
+  char				locHost[GENIF_MAXLEN_HOST + 1];
+  int				locPort;
+
+  int				locHP;
   
-  char				localHost[GENIF_MAXLEN_HOST + 1];
-  int				localPort;
-
   void*				parent;
   void				(*cbNotify)(GENIF_client_t*, int,
                                             GENIF_channel_t*,
@@ -442,8 +444,7 @@ struct GENIF_client_tag
                                                 GENIF_channel_t*);
   int				extQueueFlag;
 
-  RLST_reflist_t		outQueue_;
-  RLST_reflist_t*		outQueue;
+  RLST_reflist_t		outQueue[1];
 
   int				emptyFlag;
 
@@ -494,9 +495,10 @@ typedef struct GENIF_server_counter_tag
 struct GENIF_server_tag 
 {
   uv_loop_t*		loop;
+  uv_tcp_t 			server[1];
 
-  char				localHost[GENIF_MAXLEN_HOST + 1];
-  int				localPort;
+  char				locHost[GENIF_MAXLEN_HOST + 1];
+  int				locPort;
 
   int				listenFd;
 
@@ -691,7 +693,7 @@ GENIF_message_t* GENIF_channel_get_any_msg
   int*				outStore
 );
 
-int GENIF_channel_acquire_msg
+int GENIF_channel_unref_msg
 (
   GENIF_channel_t*		inPtrChn,
   GENIF_message_t*		inPtrMsg
@@ -827,7 +829,7 @@ int GENIF_client_reply
   GENIF_message_t*		inPtrMessage
 );
 
-int GENIF_client_acquire_msg
+int GENIF_client_unref_msg
 (
   GENIF_client_t*		inPtrClient,
   GENIF_message_t*		inPtrMsg
@@ -929,7 +931,7 @@ int GENIF_server_reply
   GENIF_message_t*		inPtrMessage
 );
 
-int GENIF_server_acquire_msg
+int GENIF_server_unref_msg
 (
   GENIF_server_t*		inPtrServer,
   GENIF_message_t*		inPtrMsg
@@ -959,10 +961,49 @@ long GENIF_server_channel_num
 
 //----------------
 
-void GENIF_set_fatal_error(void (*inFatalError)(const char*));
-void GENIF_fatal_error(char* inFile, int inLine, const char* inErrorStr);
+void GENIF_set_fatal_error(void (*)(const char*));
+void GENIF_fatal_error(char*, int, const char*, ...);
 
 #define GENIF_FATAL(cad) GENIF_fatal_error((char *)__FILE__,(int)__LINE__,cad);
+
+#define GENIF_FATAL0(cad) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad)
+
+#define GENIF_FATAL1(cad,arg1) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1))
+
+#define GENIF_FATAL2(cad,arg1,arg2) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2))
+
+#define GENIF_FATAL3(cad,arg1,arg2,arg3) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2),(arg3))
+
+#define GENIF_FATAL4(cad,arg1,arg2,arg3,arg4) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2),(arg3),(arg4))
+
+#define GENIF_FATAL5(cad,arg1,arg2,arg3,arg4,arg5) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2),(arg3),(arg4),(arg5))
+
+#define GENIF_FATAL6(cad,arg1,arg2,arg3,arg4,arg5,arg6) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2),(arg3),(arg4),(arg5),(arg6))
+
+#define GENIF_FATAL7(cad,arg1,arg2,arg3,arg4,arg5,arg6,arg7) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2),(arg3),(arg4),(arg5),(arg6),(arg7))
+
+#define GENIF_FATAL8(cad,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2),(arg3),(arg4),(arg5),(arg6),(arg7),(arg8))
+
+#define GENIF_FATAL9(cad,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9) \
+	GENIF_fatal_error((char *)__FILE__,(int)__LINE__, cad,\
+	(arg1),(arg2),(arg3),(arg4),(arg5),(arg6),(arg7),(arg8),(arg9))
 
 //----------------
 

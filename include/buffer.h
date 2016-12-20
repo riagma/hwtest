@@ -157,6 +157,7 @@ struct BUFF_memo_tag
 //----------------
 
 int BUFF_initialize(void);
+void BUFF_memo_view(void);
 
 //----------------
 

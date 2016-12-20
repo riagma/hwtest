@@ -19,6 +19,15 @@
 
 //----------------
 
+static void timer1sec_cb(uv_timer_t* inTimer)
+{
+  TRAZA1("Entering in timer1sec_cb(%p)", inTimer);
+
+  TRAZA0("Returning from timer1sec_cb()");
+}
+
+//----------------
+
 int main(void)
 {
   BUFF_memo_t*		memo;
@@ -30,18 +39,8 @@ int main(void)
 
 //----------------
 
-  uv_loop_t *loop = malloc(sizeof(uv_loop_t));
-
-  uv_loop_init(loop);
-  printf("uv_loop_init()\n");
-
-  uv_run(loop, UV_RUN_DEFAULT);
-  printf("uv_run()\n");
-
-  uv_loop_close(loop);
-  printf("uv_loop_close()\n");
-
-  free(loop);
+  uv_loop_t			loop[1];
+  uv_timer_t		timer1sec[1];
 
 //----------------
 
@@ -69,6 +68,28 @@ int main(void)
   buff->idxLen = buff->head->part->len;
 
   JSON_object_decode(jsobj, buff);
+
+  JSON_memo_view();
+  JSON_object_delete(jsobj);
+  JSON_memo_view();
+
+  BUFF_memo_view();
+  BUFF_buff_delete(buff); BUFF_memo_delete(memo);
+  BUFF_memo_view();
+
+//----------------
+
+  uv_loop_init(loop);
+  printf("uv_loop_init()\n");
+
+  uv_timer_init(loop, timer1sec);
+  uv_timer_start(timer1sec, timer1sec_cb, 10, 1000);
+
+  uv_run(loop, UV_RUN_DEFAULT);
+  printf("uv_run()\n");
+
+  uv_loop_close(loop);
+  printf("uv_loop_close()\n");
 
 //----------------
 
