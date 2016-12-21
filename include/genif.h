@@ -31,6 +31,8 @@ ______________________________________________________________________________*/
 #include "reftree.h"
 #include "refmemo.h"
 
+#include "buffer.h"
+
 /*__CONSTANTES________________________________________________________________*/
   
 //----------------
@@ -224,7 +226,7 @@ struct GENIF_message_tag
   GENIF_channel_t*		channel;
   GENIF_modifier_t*		modifier;
   
-  long					T;
+  long				T;
   unsigned long			O;
 
   int				notDelete;
@@ -309,15 +311,15 @@ typedef struct GENIF_channel_counter_tag
 
 struct GENIF_channel_tag
 {
-  uv_loop_t*		loop;
+  uv_loop_t*			loop;
   uv_tcp_t 			channel[1];
-  uv_connect_t		connreq[1];
+  uv_connect_t			connreq[1];
 
   int				fd;
   int				type;
   void*				parent;
-  void				(*cbNotify)(GENIF_channel_t*, int,
-					    GENIF_message_t*);
+  void			      (*cbNotify)(GENIF_channel_t*, int,
+                                          GENIF_message_t*);
 
   GENIF_modifier_t*		modifier;
 
@@ -356,14 +358,16 @@ struct GENIF_channel_tag
   long				inBuffLen;
   GENIF_message_t*		inBuffMsg;
 
-  GENIF_message_t*		(*extQueueFunc)(GENIF_channel_t*);
+  GENIF_message_t*	      (*extQueueFunc)(GENIF_channel_t*);
   int				extQueueFlag;
 
   GENIF_message_t*		outPtrMsg;
 
   RLST_reflist_t		outQueue[1];
+
   RLST_reflist_t		outRefTout[1];
   RFTR_reftree_t		outRef[1];
+
   RLST_reflist_t		inRef[1];
 
   GENIF_channel_config_t*	config;
@@ -410,38 +414,35 @@ typedef struct GENIF_client_counter_tag
 
 struct GENIF_client_tag 
 {
-  uv_loop_t*		loop;
+  uv_loop_t*			loop;
+  uv_timer_t			timer[1];
 
   char				remHost[GENIF_MAXLEN_HOST + 1];
   int				remPort;
 
   char				locHost[GENIF_MAXLEN_HOST + 1];
   int				locPort;
-
-  int				locHP;
+  int				locFlag;
   
   void*				parent;
-  void				(*cbNotify)(GENIF_client_t*, int,
-                                            GENIF_channel_t*,
-					    GENIF_message_t*);
+
+  void			      (*cbNotify)(GENIF_client_t*, int,
+                                          GENIF_channel_t*,
+					  GENIF_message_t*);
 
   GENIF_modifier_t*		modifier;
 
   void*				extRef;
 
-  uv_timer_t			timer[1];
-
-  int				connecting;
-  
   int				disconnFlag;
 
   long				reconnectT;
   int				reconnectFlag;
 
-  RLST_reflist_t		channel[1];
+  RLST_reflist_t		connected[1];
+  RLST_reflist_t		connecting[1];
 
-  GENIF_message_t*		(*extQueueFunc)(GENIF_client_t*, 
-                                                GENIF_channel_t*);
+  GENIF_message_t*	      (*extQueueFunc)(GENIF_client_t*, GENIF_channel_t*);
   int				extQueueFlag;
 
   RLST_reflist_t		outQueue[1];
@@ -494,7 +495,7 @@ typedef struct GENIF_server_counter_tag
 
 struct GENIF_server_tag 
 {
-  uv_loop_t*		loop;
+  uv_loop_t*			loop;
   uv_tcp_t 			server[1];
 
   char				locHost[GENIF_MAXLEN_HOST + 1];

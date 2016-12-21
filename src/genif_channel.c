@@ -120,7 +120,7 @@ GENIF_channel_pre_initialize
 
   if(ret == GENIF_RC_OK)
   {
-	inChannel->loop     = uv_default_loop();
+    inChannel->loop     = uv_default_loop();
 
     inChannel->fd       = -1;
     inChannel->type     = inChannelType;
