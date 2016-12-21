@@ -41,17 +41,17 @@ ______________________________________________________________________________*/
 #define	GENIF_MAXLEN_STRING			4096
 #define	GENIF_MAXLEN_DUMP			131072
 
-#define	GENIF_MAXLEN_PLAT_BUFFER		4096
-#define	GENIF_MAXLEN_READ_BUFFER		655360
-#define	GENIF_MAXLEN_WRITE_BUFFER		65536
-//efine	GENIF_MAXLEN_GENIF_BUFFER		65536
-
 #define	GENIF_MAXNUM_MESSAGE_ID			2147483647
+
+#define	GENIF_MAXNUM_BUFFERS			8
 
 //----------------
 
 #define	GENIF_FLAG_ON				1
 #define	GENIF_FLAG_OFF				0
+
+#define	GENIF_ON				1
+#define	GENIF_OFF				0
 
 #define	GENIF_TRUE				1
 #define	GENIF_FALSE				0
@@ -315,7 +315,6 @@ struct GENIF_channel_tag
   uv_tcp_t 			channel[1];
   uv_connect_t			connreq[1];
 
-  int				fd;
   int				type;
   void*				parent;
   void			      (*cbNotify)(GENIF_channel_t*, int,
@@ -334,6 +333,8 @@ struct GENIF_channel_tag
 
   long				T;
 
+  int				connected;
+
   int				readMask;
   int				writeMask;
   
@@ -348,12 +349,11 @@ struct GENIF_channel_tag
   long				outFlowCount;
   long				inFlowCount;
 
-  unsigned char			outBuff[GENIF_MAXLEN_WRITE_BUFFER];
-  long				outBuffIdx;
-  long				outBuffLen;
+  uv_buf_t 			outBuff[GENIF_MAXNUM_BUFFERS];
+  int				outBuffNum;
   GENIF_message_t*		outBuffMsg;
 
-  unsigned char			inBuff[GENIF_MAXLEN_READ_BUFFER];
+  BUFF_buff_t*			inBuff;
   long				inBuffIdx;
   long				inBuffLen;
   GENIF_message_t*		inBuffMsg;
@@ -436,11 +436,11 @@ struct GENIF_client_tag
 
   int				disconnFlag;
 
-  long				reconnectT;
+  long				reconnectTime;
   int				reconnectFlag;
 
-  RLST_reflist_t		connected[1];
-  RLST_reflist_t		connecting[1];
+  RLST_reflist_t		channel[1];
+  RLST_reflist_t		chnltmp[1];
 
   GENIF_message_t*	      (*extQueueFunc)(GENIF_client_t*, GENIF_channel_t*);
   int				extQueueFlag;
@@ -616,21 +616,6 @@ char* GENIF_message_dump
 //----------------
 //---------------- Channel
 
-int GENIF_channel_pre_initialize
-(
-  GENIF_channel_t* 		inPtrChannel,
-  void*				inPtrParent,
-  int				inChannelType,
-  GENIF_message_t*		(*inExtQueueFunc)(GENIF_channel_t*),
-  void				(*inCbNotify)(GENIF_channel_t*, int,
-					      GENIF_message_t*),
-  GENIF_channel_config_t*	inPtrConfig,
-  GENIF_channel_counter_t*	inPtrCounter,
-  GENIF_modifier_t*		inPtrModifier
-);
-
-int GENIF_channel_fd_initialize(GENIF_channel_t* inPtrChannel, int inFd);
-
 int GENIF_channel_initialize
 (
   GENIF_channel_t* 		inPtrChannel,
@@ -644,8 +629,6 @@ int GENIF_channel_initialize
   GENIF_channel_counter_t*	inPtrCounter,
   GENIF_modifier_t*		inPtrModifier
 );
-
-int GENIF_channel_fd_finalize(GENIF_channel_t* inPtrChannel);
 
 int GENIF_channel_finalize(GENIF_channel_t* inPtrChannel);
 

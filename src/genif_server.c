@@ -20,6 +20,7 @@ ______________________________________________________________________________*/
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef __linux__
 #include <sys/socket.h>
@@ -121,9 +122,9 @@ GENIF_server_initialize
 
   if(ret == GENIF_RC_OK)
   {
-	memset(inServer, 0, sizeof(GENIF_server_t));
+    memset(inServer, 0, sizeof(GENIF_server_t));
 
-	inServer->loop = uv_default_loop();
+    inServer->loop = uv_default_loop();
 
     inServer->locPort = inPort;
     strcpy(inServer->locHost, "0.0.0.0");
@@ -335,8 +336,8 @@ GENIF_server_timer_cb(uv_timer_t* inTimer)
 
     PRUEBA8("%s:%d -> T=%ld, O=%ld, W=%ld, I=%ld, Fi=%ld, Fo=%ld",
     	     inServer->locHost,
-			 inServer->locPort,
-		     Tm, Om, Wm, Im, Fi, Fo);
+	     inServer->locPort,
+	     Tm, Om, Wm, Im, Fi, Fo);
   }
 
 //----------------
@@ -362,21 +363,21 @@ GENIF_server_timer_cb(uv_timer_t* inTimer)
 static void
 GENIF_server_accept_cb
 ( 
-  uv_stream_t*				inUvServer,
-  int						inUvStatus
+  uv_stream_t*			inUvServer,
+  int				inUvStatus
 )
 {
-  GENIF_server_t*			inServer = inUvServer->data;
+  GENIF_server_t*		inServer = inUvServer->data;
 
-  GENIF_channel_t*			ptrChannel = NULL;
+  GENIF_channel_t*		ptrChannel = NULL;
 
-  uv_tcp_t 					channel[1];
+  uv_tcp_t 			channel[1];
 
   struct sockaddr_storage 	addr[1];
-//int						port;
-  int						alen;
+//int				port;
+  int				alen;
 
-  int						ret = GENIF_RC_OK;
+  int				ret = GENIF_RC_OK;
 
   TRAZA1("Entering in GENIF_server_accept_cb(%p)", inServer);
 
@@ -384,12 +385,12 @@ GENIF_server_accept_cb
 
   if(inUvStatus < 0)
   {
-	SUCESO3("ERROR: GENIF_server_accept_cb(%s, %d) = %d",
-		     inServer->locHost,
-			 inServer->locPort,
-			 inUvStatus);
+    SUCESO3("ERROR: GENIF_server_accept_cb(%s, %d) = %d",
+             inServer->locHost,
+             inServer->locPort,
+             inUvStatus);
 
-	ret = GENIF_RC_ERROR;
+    ret = GENIF_RC_ERROR;
   }
 
 //----------------
@@ -402,13 +403,13 @@ GENIF_server_accept_cb
       SUCESO1("WARNING: REACHED MAXNUM OF CHANNELS %ld",
                inServer->config.channelMax);
 
-  	  uv_accept((uv_stream_t*)(inServer->server), (uv_stream_t*)(channel));
+      uv_accept((uv_stream_t*)(inServer->server), (uv_stream_t*)(channel));
 
-  	  uv_tcp_getpeername(channel, (struct sockaddr*)(addr), &alen);
+      uv_tcp_getpeername(channel, (struct sockaddr*)(addr), &alen);
 /*
       SUCESO2("WARNING: REFUSED CONNECTION FROM (%s, %d)",
     	       inet_ntoa(addr->sin_addr),
-			   port = ntohs(addr->sin_port));
+    	       port = ntohs(addr->sin_port));
 */
   	  uv_close((uv_handle_t*)(channel), NULL);
     }
@@ -425,8 +426,8 @@ GENIF_server_accept_cb
     uv_tcp_getpeername(channel, (struct sockaddr*)(addr), &alen);
 /*
     SUCESO2("WARNING: REFUSED CONNECTION FROM (%s, %d)",
-  	         inet_ntoa(addr->sin_addr),
-			 port = ntohs(addr->sin_port));
+  	     inet_ntoa(addr->sin_addr),
+	     port = ntohs(addr->sin_port));
 */
     uv_close((uv_handle_t*)(channel), NULL);
   }
@@ -439,27 +440,27 @@ GENIF_server_accept_cb
 
     if(GENIF_channel_initialize(ptrChannel, 0, inServer,
                                 GENIF_CHANNEL_TYPE_SERVER, NULL,
-		                        GENIF_server_channel_notify_cb,
-		                        &inServer->config.channel,
-		                        &inServer->counter->channel,
-				                inServer->modifier) < 0)
+				GENIF_server_channel_notify_cb,
+				&inServer->config.channel,
+				&inServer->counter->channel,
+				inServer->modifier) < 0)
     {
       GENIF_FATAL("ERROR: GENIF_channel_initialize()");
     }
 
-	if(uv_accept((uv_stream_t*)(inServer->server),
-		         (uv_stream_t*)(ptrChannel->channel)) < 0)
-	{
-	  SUCESO2("ERROR: uv_accept(%s, %s)",
-		       inServer->locHost,
-			   inServer->locPort);
+    if(uv_accept((uv_stream_t*)(inServer->server),
+	         (uv_stream_t*)(ptrChannel->channel)) < 0)
+    {
+      SUCESO2("ERROR: uv_accept(%s, %s)",
+	       inServer->locHost,
+	       inServer->locPort);
 
-	  uv_close((uv_handle_t*)(ptrChannel->channel), NULL);
+      uv_close((uv_handle_t*)(ptrChannel->channel), NULL);
 
-	  GENIF_channel_delete(ptrChannel); ptrChannel = NULL;
+      GENIF_channel_delete(ptrChannel); ptrChannel = NULL;
 
-	  ret = GENIF_RC_ERROR;
-	}
+      ret = GENIF_RC_ERROR;
+    }
   }
 
 //----------------
@@ -682,7 +683,7 @@ GENIF_server_external_queue_set
 
   TRAZA2("Entering in GENIF_server_external_queue_set(%p, %p)", 
           inServer,
-	      inExtQueueFunc);
+	  inExtQueueFunc);
 
 //----------------
 
@@ -864,19 +865,13 @@ GENIF_server_unref_msg
   {
     if(inMessage->channel->parent == inServer)
     {
-      ret = GENIF_channel_acquire_msg(inMessage->channel, inMessage);
+      ret = GENIF_channel_unref_msg(inMessage->channel, inMessage);
     }
 
-    else
-    {
-      ret = GENIF_RC_NOT_FOUND;
-    }
+    else { ret = GENIF_RC_NOT_FOUND; }
   }
 
-  else
-  {
-    ret = GENIF_RC_NOT_FOUND;
-  }
+  else { ret = GENIF_RC_NOT_FOUND; }
 
 //----------------
 
