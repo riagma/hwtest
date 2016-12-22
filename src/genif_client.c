@@ -1653,10 +1653,9 @@ GENIF_client_channel_notify_cb
 
       case GENIF_NOTIFY_CHANNEL_INACTIVITY:
       {
-	SUCESO3("WARNING: CONNECTION (%s, %d) CHANNEL (%d) INACTIVITY", 
+	SUCESO2("WARNING: CONNECTION (%s, %d) INACTIVITY",
 		 inClient->remHost,
-		 inClient->remPort,
-		 inChannel->fd);
+		 inClient->remPort);
 
         GENIF_channel_empty(inChannel, GENIF_END_CLOSE);
 
@@ -1669,10 +1668,9 @@ GENIF_client_channel_notify_cb
 
       case GENIF_NOTIFY_CHANNEL_MALFUNCTION:
       {
-	SUCESO3("WARNING: CONNECTION (%s, %d) CHANNEL (%d) MALFUNCTION", 
+	SUCESO2("WARNING: CONNECTION (%s, %d) MALFUNCTION",
 		 inClient->remHost,
-		 inClient->remPort,
-		 inChannel->fd);
+		 inClient->remPort);
 
         GENIF_channel_empty(inChannel, GENIF_END_CLOSE);
 

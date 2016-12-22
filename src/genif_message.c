@@ -170,28 +170,25 @@ int
 GENIF_message_encode
 (
   GENIF_message_t*		inPtrMsg,
-  long				inMaxLen,
-  unsigned char*		outPtrBuff,
-  long*				outPtrLen
+  uv_buf_t 			outBuff[],
+  int*				outBnum
 )
 {
   char				buff[GENIF_MAXLEN_DUMP];
 
+  int				idx;
   int				ret = GENIF_RC_OK;
 
   TRAZA1("Entering in GENIF_message_encode(%p)", inPtrMsg);
 
 //----------------
-
   GENIF_message_view(inPtrMsg, 3);
-
 //----------------
 
   ret = inPtrMsg->modifier->message_encode(inPtrMsg->modMsg,
                                            inPtrMsg->type, 
-                                           inMaxLen, 
-					   outPtrBuff, 
-					   outPtrLen);
+					   outBuff,
+					   outBnum);
 
 //----------------
 
@@ -204,9 +201,12 @@ GENIF_message_encode
 
   else if(TRACE_level_get(TRACE_TYPE_DEFAULT) == 3)
   {
-    AUXF_memory_dump(outPtrBuff, *outPtrLen, GENIF_MAXLEN_DUMP, buff);
+    for(idx = 0; idx < *outBnum; idx++)
+    {
+      AUXF_memory_dump(outBuff[idx].base, outBuff[idx].len, GENIF_MAXLEN_DUMP, buff);
 
-    DEPURA1("ENCODE MESSAGE:\n%s", buff);
+      DEPURA1("ENCODE MESSAGE:\n%s", buff);
+    }
   }
   
 //----------------
@@ -221,47 +221,65 @@ GENIF_message_encode
 int 
 GENIF_message_decode
 (
-  GENIF_message_t*		inPtrMsg,
-  unsigned char*		inPtrBuff,
-  long				inBuffLen,
-  long*				outPtrLen
+  GENIF_message_t*		inMessage,
+  BUFF_buff_t*			inBuffer
 )
 {
   char				buff[GENIF_MAXLEN_DUMP];
 
+  BUFF_elem_t*			elm;
+  long				off;
+  long				len;
+
   int				ret = GENIF_RC_OK;
 
-  TRAZA1("Entering in GENIF_message_decode(%p)", inPtrMsg);
+  TRAZA2("Entering in GENIF_message_decode(%p, %p)", inMessage, inBuffer);
 
 //----------------
     
   if(TRACE_level_get(TRACE_TYPE_DEFAULT) == 3)
   {
-    AUXF_memory_dump(inPtrBuff, inBuffLen, GENIF_MAXLEN_DUMP, buff);
+    elm = inBuffer->idxElm;
+    off = inBuffer->idxOff;
 
-    DEPURA1("DECODE MESSAGE:\n%s", buff);
+    while(elm != NULL)
+    {
+      len = elm->part->len - off;
+
+      AUXF_memory_dump(elm->part->data + off, len, GENIF_MAXLEN_DUMP, buff);
+
+      DEPURA1("DECODE MESSAGE:\n%s", buff);
+
+      elm = elm->next; off = 0;
+    }
   }
 
 //----------------
 
-  ret = inPtrMsg->modifier->message_decode(inPtrMsg->modMsg, 
-                                           inPtrBuff, 
-					   inBuffLen, 
-					   outPtrLen, &inPtrMsg->type);
+  elm = inBuffer->idxElm;
+  off = inBuffer->idxOff;
+
+  ret = inMessage->modifier->message_decode(inMessage->modMsg,
+		                            inBuffer,
+					   &inMessage->type);
 
 //----------------
 
   if(ret == GENIF_RC_ERROR)
   {
-    AUXF_memory_dump(inPtrBuff, inBuffLen, GENIF_MAXLEN_DUMP, buff);
+    while(elm != NULL)
+    {
+      len = elm == inBuffer->idxElm ? inBuffer->idxOff : elm->part->len - off;
 
-    SUCESO1("ERROR: GENIF_message_decode():\n%s", buff);
+      AUXF_memory_dump(elm->part->data + off, len, GENIF_MAXLEN_DUMP, buff);
+
+      DEPURA1("DECODE MESSAGE:\n%s", buff);
+
+      elm = elm != inBuffer->idxElm ? elm->next : NULL; off = 0;
+    }
   }
 
-  else
-  {
-    GENIF_message_view(inPtrMsg, 3);
-  }
+  else { GENIF_message_view(inMessage, 3); }
 
 //----------------
 

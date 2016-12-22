@@ -81,30 +81,30 @@ const char* JSON_RC[] =
 
 //----------------
 
-static int					JSON_Init_s = 0;
+static int			JSON_Init_s = 0;
 
-static BUFF_memo_t*			JSON_BuffMemo_s = NULL;
-static BUFF_buff_t*			JSON_BuffJson_s = NULL;
+static BUFF_memo_t*		JSON_BuffMemo_s = NULL;
+static BUFF_buff_t*		JSON_BuffJson_s = NULL;
 
 static MEMO_refmemo_t*		JSON_MapMemo_s = 0;
-static long					JSON_MapUsed_s = 0;
-static long					JSON_MapMark_s = 0;
+static long			JSON_MapUsed_s = 0;
+static long			JSON_MapMark_s = 0;
 
 static MEMO_refmemo_t*		JSON_ValueMemo_s = 0;
-static long					JSON_ValueUsed_s = 0;
-static long					JSON_ValueMark_s = 0;
+static long			JSON_ValueUsed_s = 0;
+static long			JSON_ValueMark_s = 0;
 
 static MEMO_refmemo_t*		JSON_ArrayMemo_s = 0;
-static long					JSON_ArrayUsed_s = 0;
-static long					JSON_ArrayMark_s = 0;
+static long			JSON_ArrayUsed_s = 0;
+static long			JSON_ArrayMark_s = 0;
 
 static MEMO_refmemo_t*		JSON_PairMemo_s = 0;
-static long					JSON_PairUsed_s = 0;
-static long					JSON_PairMark_s = 0;
+static long			JSON_PairUsed_s = 0;
+static long			JSON_PairMark_s = 0;
 
 static MEMO_refmemo_t*		JSON_ObjectMemo_s = 0;
-static long					JSON_ObjectUsed_s = 0;
-static long					JSON_ObjectMark_s = 0;
+static long			JSON_ObjectUsed_s = 0;
+static long			JSON_ObjectMark_s = 0;
 
 //----------------
 
@@ -126,7 +126,7 @@ JSON_initialize(void)
   JSON_pair_t			p;
   JSON_object_t			o;
 
-  int					ret = JSON_RC_OK;
+  int				ret = JSON_RC_OK;
 
   TRAZA0("Entering in JSON_memo_initialize()");
 
@@ -134,44 +134,44 @@ JSON_initialize(void)
 
   if(JSON_Init_s == JSON_FALSE)
   {
-	JSON_Init_s = JSON_TRUE;
+    JSON_Init_s = JSON_TRUE;
 
-	BUFF_initialize();
+    BUFF_initialize();
 
-	JSON_BuffMemo_s = BUFF_memo_new(64 * 1024, 32, 2);
-	JSON_BuffJson_s = BUFF_buff_new(JSON_BuffMemo_s);
+    JSON_BuffMemo_s = BUFF_memo_new(64 * 1024, 32, 2);
+    JSON_BuffJson_s = BUFF_buff_new(JSON_BuffMemo_s);
 
-	BUFF_part_new(JSON_BuffJson_s);
+    BUFF_part_new(JSON_BuffJson_s);
 
-	JSON_MapMemo_s = MEMO_createRefMemo(&m, &m.memo, sizeof(m), 128, 2);
+    JSON_MapMemo_s = MEMO_createRefMemo(&m, &m.memo, sizeof(m), 128, 2);
 
     if(JSON_MapMemo_s == NULL)
     {
       JSON_FATAL0("ERROR: MEMO_createRefMemo()");
     }
 
-	JSON_ValueMemo_s = MEMO_createRefMemo(&v, &v.memo, sizeof(v), 1024, 4);
+    JSON_ValueMemo_s = MEMO_createRefMemo(&v, &v.memo, sizeof(v), 1024, 4);
 
     if(JSON_ValueMemo_s == NULL)
     {
       JSON_FATAL0("ERROR: MEMO_createRefMemo()");
     }
 
-	JSON_ArrayMemo_s = MEMO_createRefMemo(&a, &a.memo, sizeof(a), 256, 4);
+    JSON_ArrayMemo_s = MEMO_createRefMemo(&a, &a.memo, sizeof(a), 256, 4);
 
     if(JSON_ArrayMemo_s == NULL)
     {
       JSON_FATAL0("ERROR: MEMO_createRefMemo()");
     }
 
-	JSON_PairMemo_s = MEMO_createRefMemo(&p, &p.memo, sizeof(p), 1024, 4);
+    JSON_PairMemo_s = MEMO_createRefMemo(&p, &p.memo, sizeof(p), 1024, 4);
 
     if(JSON_PairMemo_s == NULL)
     {
       JSON_FATAL0("ERROR: MEMO_createRefMemo()");
     }
 
-	JSON_ObjectMemo_s = MEMO_createRefMemo(&o, &o.memo, sizeof(o), 256, 4);
+    JSON_ObjectMemo_s = MEMO_createRefMemo(&o, &o.memo, sizeof(o), 256, 4);
 
     if(JSON_ObjectMemo_s == NULL)
     {
@@ -193,24 +193,24 @@ JSON_memo_view(void)
 {
 
   SUCESO3("JSON-MAP    = %ld(%ld)(%ld)", JSON_MapUsed_s,
-	                                     JSON_MapMark_s,
-					                     JSON_MapMemo_s->list.nume);
+                                         JSON_MapMark_s,
+                                         JSON_MapMemo_s->list.nume);
 
   SUCESO3("JSON-VALUE  = %ld(%ld)(%ld)", JSON_ValueUsed_s,
-	                                     JSON_ValueMark_s,
-					                     JSON_ValueMemo_s->list.nume);
+                                         JSON_ValueMark_s,
+                                         JSON_ValueMemo_s->list.nume);
 
   SUCESO3("JSON-ARRAY  = %ld(%ld)(%ld)", JSON_ArrayUsed_s,
-	                                     JSON_ArrayMark_s,
-					                     JSON_ArrayMemo_s->list.nume);
+                                         JSON_ArrayMark_s,
+                                         JSON_ArrayMemo_s->list.nume);
 
   SUCESO3("JSON-PAIR   = %ld(%ld)(%ld)", JSON_PairUsed_s,
-	                                     JSON_PairMark_s,
-					                     JSON_PairMemo_s->list.nume);
+                                         JSON_PairMark_s,
+                                         JSON_PairMemo_s->list.nume);
 
   SUCESO3("JSON-OBJECT = %ld(%ld)(%ld)", JSON_ObjectUsed_s,
-	                                     JSON_ObjectMark_s,
-					                     JSON_ObjectMemo_s->list.nume);
+                                         JSON_ObjectMark_s,
+                                         JSON_ObjectMemo_s->list.nume);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -236,7 +236,7 @@ JSON_map_new(void)
 
   if(JSON_MapMark_s < JSON_MapUsed_s)
   {
-	JSON_MapMark_s = JSON_MapUsed_s;
+    JSON_MapMark_s = JSON_MapUsed_s;
   }
 
 //----------------
@@ -307,7 +307,7 @@ JSON_map_find(RFTR_reftree_t* inTree, char* inKey)
 
   if(ptrMap != NULL)
   {
-	outIdx = ptrMap->idx;
+    outIdx = ptrMap->idx;
   }
 
   else { map->idx = -1; }
@@ -342,7 +342,7 @@ JSON_value_new(void)
 
   if(JSON_ValueMark_s < JSON_ValueUsed_s)
   {
-	JSON_ValueMark_s = JSON_ValueUsed_s;
+    JSON_ValueMark_s = JSON_ValueUsed_s;
   }
 
 //----------------
@@ -363,12 +363,12 @@ JSON_value_delete(JSON_value_t* inValue)
 
   if(inValue->type == JSON_VALUE_OBJECT)
   {
-	JSON_object_delete(inValue->data);
+    JSON_object_delete(inValue->data);
   }
 
   else if(inValue->type == JSON_VALUE_ARRAY)
   {
-	JSON_array_delete(inValue->data);
+    JSON_array_delete(inValue->data);
   }
 
   MEMO_delete(JSON_ValueMemo_s, inValue);
@@ -404,7 +404,7 @@ JSON_array_new(void)
 
   if(JSON_ArrayMark_s < JSON_ArrayUsed_s)
   {
-	JSON_ArrayMark_s = JSON_ArrayUsed_s;
+    JSON_ArrayMark_s = JSON_ArrayUsed_s;
   }
 
 //----------------
@@ -439,7 +439,7 @@ JSON_array_delete(JSON_array_t* inArray)
 
   if(inArray->curr != NULL)
   {
-	JSON_value_delete(inArray->curr);
+    JSON_value_delete(inArray->curr);
   }
 
   MEMO_delete(JSON_ArrayMemo_s, inArray);
@@ -474,7 +474,7 @@ JSON_pair_new(void)
 
   if(JSON_PairMark_s < JSON_PairUsed_s)
   {
-	JSON_PairMark_s = JSON_PairUsed_s;
+    JSON_PairMark_s = JSON_PairUsed_s;
   }
 
 //----------------
@@ -495,7 +495,7 @@ JSON_pair_delete(JSON_pair_t* inPair)
 
   if(inPair->value != NULL)
   {
-	JSON_value_delete(inPair->value);
+    JSON_value_delete(inPair->value);
   }
 
   MEMO_delete(JSON_PairMemo_s, inPair);
@@ -554,7 +554,7 @@ JSON_object_new(void)
 
   if(JSON_ObjectMark_s < JSON_ObjectUsed_s)
   {
-	JSON_ObjectMark_s = JSON_ObjectUsed_s;
+    JSON_ObjectMark_s = JSON_ObjectUsed_s;
   }
 
 //----------------
@@ -589,14 +589,14 @@ JSON_object_delete(JSON_object_t* inObject)
 
   while((ptrPair = RFTR_extractMini(inObject->pairTree)))
   {
-	RLST_extract(inObject->pairList, ptrPair);
+    RLST_extract(inObject->pairList, ptrPair);
 
-	JSON_pair_delete(ptrPair);
+    JSON_pair_delete(ptrPair);
   }
 
   while(inObject->buffRefs->head != NULL)
   {
-	BUFF_part_delete(inObject->buffRefs, inObject->buffRefs->head->part);
+    BUFF_part_delete(inObject->buffRefs, inObject->buffRefs->head->part);
   }
 
   MEMO_delete(JSON_ObjectMemo_s, inObject);
@@ -620,19 +620,19 @@ JSON_object_decode
 {
   JSON_pair_t*			pair;
 
-  char*					pc;
-  char					sep;
+  char*				pc;
+  char				sep;
 
   BUFF_elem_t*			iniElm;
   BUFF_elem_t*			idxElm;
 
-  int					ret = JSON_RC_OK;
+  int				ret = JSON_RC_OK;
 
   TRAZA2("Entering in JSON_object_decode(%p, %p)", inObject, inBuffer);
 
 //----------------
 
-  iniElm = inBuffer->idxElm;
+  iniElm = inBuffer->idxElm; idxElm = iniElm;
 
   if(inObject->decodeState == JSON_DECODE_STATE_INIT)
   {
@@ -672,16 +672,16 @@ JSON_object_decode
 //----------------
   
   while((inObject->decodeState == JSON_DECODE_STATE_PAIR ||
-	     inObject->decodeState == JSON_DECODE_STATE_VALUE) && ret == JSON_RC_OK)
+	 inObject->decodeState == JSON_DECODE_STATE_VALUE) && ret == JSON_RC_OK)
   {
-	if(inObject->decodeState == JSON_DECODE_STATE_PAIR)
-	{
+    if(inObject->decodeState == JSON_DECODE_STATE_PAIR)
+    {
       pair = JSON_pair_new();
 
-	  ret = JSON_name_decode(inObject, inBuffer, pair);
+      ret = JSON_name_decode(inObject, inBuffer, pair);
 
-	  if(ret == JSON_RC_OK)
-	  {
+      if(ret == JSON_RC_OK)
+      {
         if(RFTR_insert(inObject->pairTree, pair) != RFTR_RC_OK)
         {
           JSON_FATAL0("FATAL: RFTR_insert()");
@@ -693,67 +693,67 @@ JSON_object_decode
         }
 
         inObject->decodeState = JSON_DECODE_STATE_VALUE;
-	  }
+      }
 
-	  else { JSON_pair_delete(pair); }
-	}
+      else { JSON_pair_delete(pair); }
+    }
 
 //----------------
 
-	if(inObject->decodeState == JSON_DECODE_STATE_VALUE)
-	{
-	  pair = RLST_getTail(inObject->pairList);
+    if(inObject->decodeState == JSON_DECODE_STATE_VALUE)
+    {
+      pair = RLST_getTail(inObject->pairList);
 
-	  if(pair == NULL)
-	  {
-		JSON_FATAL0("FATAL: ASSERTION!!");
-	  }
+      if(pair == NULL)
+      {
+        JSON_FATAL0("FATAL: ASSERTION!!");
+      }
 
-	  if(pair->value == NULL)
-	  {
-		pair->value = JSON_value_new();
-	  }
+      if(pair->value == NULL)
+      {
+        pair->value = JSON_value_new();
+      }
 
-	  ret = JSON_value_decode(inObject, inBuffer, pair->value, &sep);
+      ret = JSON_value_decode(inObject, inBuffer, pair->value, &sep);
 
-	  if(ret == JSON_RC_OK)
-	  {
-		if(sep == ',')
-		{
-	      inObject->decodeState = JSON_DECODE_STATE_PAIR;
-		}
+      if(ret == JSON_RC_OK)
+      {
+        if(sep == ',')
+        {
+          inObject->decodeState = JSON_DECODE_STATE_PAIR;
+        }
 
-		else if(sep == '}')
-		{
-	      inObject->decodeState = JSON_DECODE_STATE_SUCCESS;
-		}
+        else if(sep == '}')
+        {
+          inObject->decodeState = JSON_DECODE_STATE_SUCCESS;
+        }
 
-	    else // if(sep != ',}')
-	    {
-	      inBuffer->idxElm = inBuffer->pc2Elm;
-	      inBuffer->idxOff = inBuffer->pc2Off + 1;
-	      inBuffer->idxLen = inBuffer->pcsLen + 1;
+        else // if(sep != ',}')
+        {
+          inBuffer->idxElm = inBuffer->pc2Elm;
+          inBuffer->idxOff = inBuffer->pc2Off + 1;
+          inBuffer->idxLen = inBuffer->pcsLen + 1;
 
-	      ret = JSON_RC_ERROR;
-	    }
-	  }
-	}
+          ret = JSON_RC_ERROR;
+        }
+      }
+    }
   }
 
 //----------------
 
   for(idxElm = inBuffer->head; idxElm != inBuffer->idxElm;)
   {
-  	BUFF_part_add(inObject->buffRefs, idxElm->part);
-  	BUFF_part_delete(inBuffer, idxElm->part); idxElm = idxElm->next;
+    BUFF_part_add(inObject->buffRefs, idxElm->part);
+    BUFF_part_delete(inBuffer, idxElm->part); idxElm = idxElm->next;
   }
 
   BUFF_part_add(inObject->buffRefs, inBuffer->idxElm->part);
 
   while(JSON_BuffJson_s->head != JSON_BuffJson_s->tail)
   {
-  	BUFF_part_add(inObject->buffRefs, JSON_BuffJson_s->head->part);
-  	BUFF_part_delete(JSON_BuffJson_s, JSON_BuffJson_s->head->part);
+    BUFF_part_add(inObject->buffRefs, JSON_BuffJson_s->head->part);
+    BUFF_part_delete(JSON_BuffJson_s, JSON_BuffJson_s->head->part);
   }
 
   BUFF_part_add(inObject->buffRefs, JSON_BuffJson_s->tail->part);

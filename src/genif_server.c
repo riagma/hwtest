@@ -29,9 +29,9 @@ ______________________________________________________________________________*/
 #endif
 
 #ifdef _WIN64
-#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #endif
 
 /*__INCLUDES DE LA BD_________________________________________________________*/
@@ -1093,10 +1093,9 @@ GENIF_server_channel_notify_cb
 
       case GENIF_NOTIFY_CHANNEL_INACTIVITY:
       {
-	SUCESO3("WARNING: CONNECTION (%s, %d) CHANNEL (%d) INACTIVITY", 
+	SUCESO2("WARNING: CONNECTION (%s, %d) INACTIVITY",
 		 inChannel->remHost,
-		 inChannel->remPort,
-		 inChannel->fd);
+		 inChannel->remPort);
 	
 	GENIF_channel_empty(inChannel, GENIF_END_CLOSE);
 	
@@ -1109,10 +1108,9 @@ GENIF_server_channel_notify_cb
 
       case GENIF_NOTIFY_CHANNEL_MALFUNCTION:
       {
-	SUCESO3("WARNING: CONNECTION (%s, %d) CHANNEL (%d) MALFUNCTION", 
+	SUCESO2("WARNING: CONNECTION (%s, %d) MALFUNCTION",
 		 inChannel->remHost,
-		 inChannel->remPort,
-		 inChannel->fd);
+		 inChannel->remPort);
 	
 	GENIF_channel_empty(inChannel, GENIF_END_CLOSE);
 	

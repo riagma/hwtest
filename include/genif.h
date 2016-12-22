@@ -205,8 +205,8 @@ struct GENIF_modifier_tag
 
   int	(*message_cmp)(void*, void*);
 
-  int	(*message_encode)(void*, int, long, unsigned char*, long*);
-  int	(*message_decode)(void*, unsigned char*, long, long*, int*);
+  int	(*message_encode)(void*, int, uv_buf_t [], int*);
+  int	(*message_decode)(void*, BUFF_buff_t*, int*);
 
   void  (*message_resp_copy)(void*, void*);
 
@@ -225,7 +225,9 @@ struct GENIF_message_tag
   void*				modMsg;
   GENIF_channel_t*		channel;
   GENIF_modifier_t*		modifier;
-  
+
+  uv_write_t 			uvReq[1];
+
   long				T;
   unsigned long			O;
 
@@ -352,16 +354,15 @@ struct GENIF_channel_tag
   uv_buf_t 			outBuff[GENIF_MAXNUM_BUFFERS];
   int				outBuffNum;
   GENIF_message_t*		outBuffMsg;
+  uv_write_t 			outBuffReq[1];
 
   BUFF_buff_t*			inBuff;
-  long				inBuffIdx;
-  long				inBuffLen;
   GENIF_message_t*		inBuffMsg;
 
   GENIF_message_t*	      (*extQueueFunc)(GENIF_channel_t*);
   int				extQueueFlag;
 
-  GENIF_message_t*		outPtrMsg;
+  GENIF_message_t*		outMsg;
 
   RLST_reflist_t		outQueue[1];
 
@@ -561,54 +562,51 @@ struct GENIF_server_tag
 void GENIF_factory_initialize(void);
 void GENIF_factoty_memo_view();
 
-GENIF_message_t* GENIF_message_new(GENIF_modifier_t* inPtrModifier);
-void GENIF_message_delete(GENIF_message_t* inPtrMessage);
+GENIF_message_t* GENIF_message_new(GENIF_modifier_t* inModifier);
+void GENIF_message_delete(GENIF_message_t* inMessage);
 
 GENIF_channel_t* GENIF_channel_new(void);
-void GENIF_channel_delete(GENIF_channel_t* inPtrChannel);
+void GENIF_channel_delete(GENIF_channel_t* inChannel);
 
 GENIF_client_t* GENIF_client_new(void);
-void GENIF_client_delete(GENIF_client_t* inPtrClient);
+void GENIF_client_delete(GENIF_client_t* inClient);
 
 GENIF_server_t* GENIF_server_new(void);
-void GENIF_server_delete(GENIF_server_t* inPtrServer);
+void GENIF_server_delete(GENIF_server_t* inServer);
 
 //----------------
 //---------------- Message
 
-int GENIF_message_cmp(void* inPtrMessageA, void* inPtrMessageB);
+int GENIF_message_cmp(void* inMessageA, void* inMessageB);
 
 //----------------
 
 int GENIF_message_encode
 (
-  GENIF_message_t*		inPtrMessage,
-  long				inMaxLen,
-  unsigned char*		outPtrBuff,
-  long*				outPtrLen
+    GENIF_message_t*		inMessage,
+    uv_buf_t 			outBuff[],
+    int*			outBnum
 );
 
 int GENIF_message_decode
 (
-  GENIF_message_t*		inPtrMessage,
-  unsigned char*		inPtrBuff,
-  long				inBuffLen,
-  long*				outPtrLen
+  GENIF_message_t*		inMessage,
+  BUFF_buff_t*			inBuffer
 );
 
 void GENIF_message_resp_copy
 (
-  GENIF_message_t*		inPtrMessage,
-  GENIF_message_t*		inPtrResp
+  GENIF_message_t*		inMessage,
+  GENIF_message_t*		inResp
 );
 
 //----------------
 
-void GENIF_message_view(GENIF_message_t* inPtrMessage, int inTraceLevel);
+void GENIF_message_view(GENIF_message_t* inMessage, int inTraceLevel);
 
 char* GENIF_message_dump
 (
-  GENIF_message_t*		inPtrMessage,
+  GENIF_message_t*		inMessage,
   long				inStrLen,
   char*				outStr
 );
@@ -618,81 +616,81 @@ char* GENIF_message_dump
 
 int GENIF_channel_initialize
 (
-  GENIF_channel_t* 		inPtrChannel,
+  GENIF_channel_t* 		inChannel,
   int				inFd,
-  void*				inPtrParent,
+  void*				inParent,
   int				inChannelType,
   GENIF_message_t*		(*inExtQueueFunc)(GENIF_channel_t*),
   void				(*inCbNotify)(GENIF_channel_t*, int,
 					      GENIF_message_t*),
-  GENIF_channel_config_t*	inPtrConfig,
-  GENIF_channel_counter_t*	inPtrCounter,
-  GENIF_modifier_t*		inPtrModifier
+  GENIF_channel_config_t*	inConfig,
+  GENIF_channel_counter_t*	inCounter,
+  GENIF_modifier_t*		inModifier
 );
 
-int GENIF_channel_finalize(GENIF_channel_t* inPtrChannel);
+int GENIF_channel_finalize(GENIF_channel_t* inChannel);
 
 //----------------
 
-int GENIF_channel_address(GENIF_channel_t* inPtrChn);
+int GENIF_channel_address(GENIF_channel_t* inChn);
 
 //----------------
 
-void GENIF_channel_timer_cb(GENIF_channel_t* inPtrChannel, long inT);
+void GENIF_channel_timer_cb(GENIF_channel_t* inChannel, long inT);
 
 //----------------
 
-void GENIF_channel_read_disable(GENIF_channel_t* inPtrChannel, int inFlag);
-void GENIF_channel_write_disable(GENIF_channel_t* inPtrChannel, int inFlag);
+void GENIF_channel_read_disable(GENIF_channel_t* inChannel, int inFlag);
+void GENIF_channel_write_disable(GENIF_channel_t* inChannel, int inFlag);
 
 //----------------
 
-int GENIF_channel_external_queue(GENIF_channel_t* inPtrChannel, int inFlag);
+int GENIF_channel_external_queue(GENIF_channel_t* inChannel, int inFlag);
 
 int GENIF_channel_send
 (
-  GENIF_channel_t*		inPtrChannel,
-  GENIF_message_t*		inPtrMessage
+  GENIF_channel_t*		inChannel,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_channel_request
 (
-  GENIF_channel_t*		inPtrChannel,
-  GENIF_message_t*		inPtrMessage
+  GENIF_channel_t*		inChannel,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_channel_reply
 (
-  GENIF_channel_t*		inPtrChannel,
-  GENIF_message_t*		inPtrMessage
+  GENIF_channel_t*		inChannel,
+  GENIF_message_t*		inMessage
 );
 
 //----------------
 
-int GENIF_channel_empty(GENIF_channel_t* inPtrChn, int inEndType);
+int GENIF_channel_empty(GENIF_channel_t* inChn, int inEndType);
 
 GENIF_message_t* GENIF_channel_get_any_msg
 (
-  GENIF_channel_t*		inPtrChannel,
+  GENIF_channel_t*		inChannel,
   int*				outStore
 );
 
 int GENIF_channel_unref_msg
 (
-  GENIF_channel_t*		inPtrChn,
-  GENIF_message_t*		inPtrMsg
+  GENIF_channel_t*		inChn,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_channel_cancel_msg
 (
-  GENIF_channel_t*		inPtrChannel,
-  GENIF_message_t*		inPtrMessage,
+  GENIF_channel_t*		inChannel,
+  GENIF_message_t*		inMessage,
   int*				outStore
 );
 
 long GENIF_channel_message_num
 (
-  GENIF_channel_t*		inPtrChannel,
+  GENIF_channel_t*		inChannel,
   long*				outOstore,
   long*				outWstore,
   long*				outIstore
@@ -703,132 +701,132 @@ long GENIF_channel_message_num
 
 int GENIF_client_initialize
 (
-  GENIF_client_t*		inPtrClient,
+  GENIF_client_t*		inClient,
   char*				inHost,
   int				inPort,
-  void*				inPtrParent,
+  void*				inParent,
   void				(*inCbNotify)(GENIF_client_t*, int,
                                               GENIF_channel_t*,
 					      GENIF_message_t*),
-  GENIF_client_config_t*	inPtrConfig,
-  GENIF_modifier_t*		inPtrModifier
+  GENIF_client_config_t*	inConfig,
+  GENIF_modifier_t*		inModifier
 );
 
-int GENIF_client_finalize(GENIF_client_t* inPtrClient);
+int GENIF_client_finalize(GENIF_client_t* inClient);
 
 //----------------
 
 int GENIF_client_initialize_hp
 (
-  GENIF_client_t*		inPtrClient,
+  GENIF_client_t*		inClient,
   char*				inHost,
   int				inPort,
   char*				inLocalHost,
   int				inLocalPort,
-  void*				inPtrParent,
+  void*				inParent,
   void				(*inCbNotify)(GENIF_client_t*, int,
                                               GENIF_channel_t*,
 					      GENIF_message_t*),
-  GENIF_client_config_t*	inPtrConfig,
-  GENIF_modifier_t*		inPtrModifier
+  GENIF_client_config_t*	inConfig,
+  GENIF_modifier_t*		inModifier
 );
 
 //----------------
 
 int GENIF_client_reconfig
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_client_config_t*	inPtrConfig
+  GENIF_client_t*		inClient,
+  GENIF_client_config_t*	inConfig
 );
 
 int GENIF_client_count
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_client_counter_t*	outPtrCounter
+  GENIF_client_t*		inClient,
+  GENIF_client_counter_t*	outCounter
 );
 
 //----------------
 
 void GENIF_client_channel_close
 ( 
-  GENIF_client_t*		inPtrClient,
-  GENIF_channel_t*		inPtrChannel
+  GENIF_client_t*		inClient,
+  GENIF_channel_t*		inChannel
 );
 
 //----------------
 
-void GENIF_client_empty_notify(GENIF_client_t* inPtrClient);
+void GENIF_client_empty_notify(GENIF_client_t* inClient);
 
-void GENIF_client_input_disable(GENIF_client_t* inPtrClient, int inFlag);
+void GENIF_client_input_disable(GENIF_client_t* inClient, int inFlag);
 
-void GENIF_client_output_disable(GENIF_client_t* inPtrClient, int inFlag);
+void GENIF_client_output_disable(GENIF_client_t* inClient, int inFlag);
 
 //----------------
 
 int GENIF_client_external_queue_set
 (
-  GENIF_client_t*	inPtrClient,
+  GENIF_client_t*	inClient,
   GENIF_message_t*	(*inExtQueueFunc)(GENIF_client_t*, GENIF_channel_t*)
 );
 
-int GENIF_client_external_queue(GENIF_client_t* inPtrClient, int inFlag);
+int GENIF_client_external_queue(GENIF_client_t* inClient, int inFlag);
 
 //----------------
 
 int GENIF_client_send
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_message_t*		inPtrMsg
+  GENIF_client_t*		inClient,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_client_request
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_message_t*		inPtrMsg
+  GENIF_client_t*		inClient,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_client_prior_request
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_message_t*		inPtrMsg
+  GENIF_client_t*		inClient,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_client_channel_send
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_channel_t* 		inPtrChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_client_t*		inClient,
+  GENIF_channel_t* 		inChannel,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_client_channel_request
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_channel_t* 		inPtrChannel,
-  GENIF_message_t*		inPtrMsg
+  GENIF_client_t*		inClient,
+  GENIF_channel_t* 		inChannel,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_client_reply
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_message_t*		inPtrMessage
+  GENIF_client_t*		inClient,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_client_unref_msg
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_message_t*		inPtrMsg
+  GENIF_client_t*		inClient,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_client_cancel_msg
 (
-  GENIF_client_t*		inPtrClient,
-  GENIF_message_t*		inPtrMsg,
+  GENIF_client_t*		inClient,
+  GENIF_message_t*		inMessage,
   int*				outStore
 );
 
 long GENIF_client_message_num
 (
-  GENIF_client_t*		inPtrClient,
+  GENIF_client_t*		inClient,
   long*				outOstore,
   long*				outWstore,
   long*				outIstore
@@ -839,98 +837,98 @@ long GENIF_client_message_num
 
 int GENIF_server_initialize
 (
-  GENIF_server_t*		inPtrServer,
+  GENIF_server_t*		inServer,
   int				inPort,
-  void*				inPtrParent,
+  void*				inParent,
   void				(*inCbNotify)(GENIF_server_t*, int,
                                               GENIF_channel_t*,
 				              GENIF_message_t*),
-  GENIF_server_config_t*	inPtrConfig,
-  GENIF_modifier_t*		inPtrModifier
+  GENIF_server_config_t*	inConfig,
+  GENIF_modifier_t*		inModifier
 );
 
-int GENIF_server_finalize(GENIF_server_t* inPtrServer);
+int GENIF_server_finalize(GENIF_server_t* inServer);
 
 //----------------
 
 void GENIF_server_channel_close
 ( 
-  GENIF_server_t*		inPtrServer,
-  GENIF_channel_t*		inPtrChannel
+  GENIF_server_t*		inServer,
+  GENIF_channel_t*		inChannel
 );
 
 //----------------
 
 int GENIF_server_reconfig
 (
-  GENIF_server_t*		inPtrServer,
-  GENIF_server_config_t*	inPtrConfig
+  GENIF_server_t*		inServer,
+  GENIF_server_config_t*	inConfig
 );
 
 int GENIF_server_count
 (
-  GENIF_server_t*		inPtrServer,
-  GENIF_server_counter_t*	outPtrCounter
+  GENIF_server_t*		inServer,
+  GENIF_server_counter_t*	outCounter
 );
 
 //----------------
 
-void GENIF_server_empty_notify(GENIF_server_t* inPtrServer);
+void GENIF_server_empty_notify(GENIF_server_t* inServer);
 
-void GENIF_server_listen_disable(GENIF_server_t* inPtrServer, int inFlag);
+void GENIF_server_listen_disable(GENIF_server_t* inServer, int inFlag);
 
-void GENIF_server_input_disable(GENIF_server_t* inPtrServer, int inFlag);
+void GENIF_server_input_disable(GENIF_server_t* inServer, int inFlag);
 
-void GENIF_server_output_disable(GENIF_server_t* inPtrServer, int inFlag);
+void GENIF_server_output_disable(GENIF_server_t* inServer, int inFlag);
 
 //----------------
 
 int GENIF_server_external_queue_set
 (
-  GENIF_server_t*	inPtrServer,
+  GENIF_server_t*	inServer,
   GENIF_message_t*	(*inExtQueueFunc)(GENIF_server_t*, GENIF_channel_t*)
 );
 
-int GENIF_server_external_queue(GENIF_server_t* inPtrServer, int inFlag);
+int GENIF_server_external_queue(GENIF_server_t* inServer, int inFlag);
 
 //----------------
 
 int GENIF_server_channel_send
 (
-  GENIF_server_t*		inPtrServer,
-  GENIF_channel_t* 		inPtrChannel,
-  GENIF_message_t*		inPtrMessage
+  GENIF_server_t*		inServer,
+  GENIF_channel_t* 		inChannel,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_server_channel_request
 (
-  GENIF_server_t*		inPtrServer,
-  GENIF_channel_t* 		inPtrChannel,
-  GENIF_message_t*		inPtrMessage
+  GENIF_server_t*		inServer,
+  GENIF_channel_t* 		inChannel,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_server_reply
 (
-  GENIF_server_t*		inPtrServer,
-  GENIF_message_t*		inPtrMessage
+  GENIF_server_t*		inServer,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_server_unref_msg
 (
-  GENIF_server_t*		inPtrServer,
-  GENIF_message_t*		inPtrMsg
+  GENIF_server_t*		inServer,
+  GENIF_message_t*		inMessage
 );
 
 int GENIF_server_cancel_msg
 (
-  GENIF_server_t*		inPtrServer,
-  GENIF_message_t*		inPtrMessage,
+  GENIF_server_t*		inServer,
+  GENIF_message_t*		inMessage,
   int*				outStore
 );
 
 long GENIF_server_message_num
 (
-  GENIF_server_t*		inPtrServer,
+  GENIF_server_t*		inServer,
   long*				outOstore,
   long*				outWstore,
   long*				outIstore
@@ -940,7 +938,7 @@ long GENIF_server_message_num
 
 long GENIF_server_channel_num
 (
-  GENIF_server_t*		inPtrServer
+  GENIF_server_t*		inServer
 );
 
 //----------------
