@@ -1689,7 +1689,7 @@ GENIF_channel_external_queue(GENIF_channel_t* inChannel, int inFlag)
 
   if(inChannel->extQueueFlag != inFlag)
   {
-    inChannel->extQueueFlag = inFlag; GENIF_channel_mask(inChannel);
+    inChannel->extQueueFlag = inFlag; // GENIF_channel_mask(inChannel);
   }
 
 //----------------
@@ -1948,7 +1948,8 @@ GENIF_channel_cancel_msg
   {
     *outStore = GENIF_O_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inMessage,
+    ret = GENIF_channel_message_end(inChannel,
+	                            inMessage,
                                     GENIF_END_USER, *outStore);
   }
 
@@ -1956,7 +1957,8 @@ GENIF_channel_cancel_msg
   {
     *outStore = GENIF_O_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inMessage,
+    ret = GENIF_channel_message_end(inChannel,
+	                            inMessage,
                                     GENIF_END_USER, *outStore);
   }
 
@@ -1964,7 +1966,8 @@ GENIF_channel_cancel_msg
   {
     *outStore = GENIF_W_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inMessage,
+    ret = GENIF_channel_message_end(inChannel,
+	                            inMessage,
                                     GENIF_END_USER, *outStore);
   }
 
@@ -1972,14 +1975,12 @@ GENIF_channel_cancel_msg
   {
     *outStore = GENIF_I_STORE;
     
-    ret = GENIF_channel_message_end(inChannel, inMessage,
+    ret = GENIF_channel_message_end(inChannel,
+	                            inMessage,
                                     GENIF_END_USER, *outStore);
   }
 
-  else
-  {
-    ret = GENIF_RC_NOT_FOUND;
-  }
+  else { ret = GENIF_RC_NOT_FOUND; }
 
 //----------------
   GENIF_channel_mask(inChannel);

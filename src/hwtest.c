@@ -8,6 +8,7 @@
  ============================================================================
  */
 
+#include <json.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +16,6 @@
 #include <uv.h>
 
 #include <trace_macros.h>
-#include <jsonif.h>
 
 //----------------
 

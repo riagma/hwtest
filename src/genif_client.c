@@ -842,7 +842,7 @@ GENIF_client_channel_close_cb
 
       GENIF_client_notify(inClient, GENIF_NOTIFY_CLIENT_DISCONNECTED,
                           NULL,
-						  NULL);
+			  NULL);
     }
   }
 
@@ -1073,6 +1073,7 @@ GENIF_client_external_queue(GENIF_client_t* inClient, int inFlag)
 }
 
 /*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 int
 GENIF_client_send
@@ -1081,11 +1082,9 @@ GENIF_client_send
   GENIF_message_t*		inMessage
 )
 {
-  long				T = uv_now(inClient->loop);
-  
-  int				rc;
-
   GENIF_channel_t*		ptrChannel;
+
+  int				sent = GENIF_FALSE;
 
   int				ret = GENIF_RC_OK;
 
@@ -1093,45 +1092,61 @@ GENIF_client_send
 
 //----------------
 
-  inClient->counter->channel.outMessage++;
-
-//----------------
-
-  if(inClient->config.outQueueMax > 0)
+  if(inClient->outputMask == GENIF_FLAG_ON)
   {
-    if(RLST_getNumElem(inClient->outQueue) >= inClient->config.outQueueMax)
-    {
-      inClient->counter->channel.outMessageError++;
-
-      ret = GENIF_RC_QUEUE_FULL;
-    }
-  }
-
-//----------------
-
-  if(ret == GENIF_RC_OK)
-  {
-    inMessage->type    = GENIF_MESSAGE_TYPE_MESSAGE;
-    inMessage->channel = NULL;
-    inMessage->T       = T;
-
-    rc = RLST_insertTail(inClient->outQueue, inMessage);
-
-    if(rc != RLST_RC_OK)
-    {
-      GENIF_FATAL("ERROR: RLST_insertTail()");
-    }
-
     RLST_resetGet(inClient->channel, NULL);
-    
-    while((ptrChannel = RLST_getNext(inClient->channel)))
-    {
-      GENIF_channel_external_queue(ptrChannel, GENIF_FLAG_ON);
-    }
 
-    GENIF_client_mask(inClient);
+    ptrChannel = RLST_getNext(inClient->channel);
+
+    while(ptrChannel != NULL)
+    {
+      if(ptrChannel->outBuffMsg == NULL)
+      {
+	ret = GENIF_channel_send(ptrChannel, inMessage);
+
+	ptrChannel = NULL; sent = GENIF_TRUE;
+      }
+
+      else
+      {
+	GENIF_channel_external_queue(ptrChannel, GENIF_FLAG_ON);
+
+	ptrChannel = RLST_getNext(inClient->channel);
+      }
+    }
   }
 
+//----------------
+
+  if(sent == GENIF_FALSE)
+  {
+    inClient->counter->channel.outMessage++;
+
+    if(inClient->config.outQueueMax > 0)
+    {
+      if(RLST_getNumElem(inClient->outQueue) >= inClient->config.outQueueMax)
+      {
+	inClient->counter->channel.outMessageError++;
+
+	ret = GENIF_RC_QUEUE_FULL;
+      }
+    }
+
+    if(ret == GENIF_RC_OK)
+    {
+      inMessage->type    = GENIF_MESSAGE_TYPE_MESSAGE;
+      inMessage->channel = NULL;
+      inMessage->T       = uv_now(inClient->loop);
+
+      if(RLST_insertTail(inClient->outQueue, inMessage) < 0)
+      {
+	GENIF_FATAL0("FATAL: RLST_insertTail()");
+      }
+    }
+  }
+
+//----------------
+  GENIF_client_mask(inClient);
 //----------------
 
   TRAZA1("Returning from GENIF_client_send() = %d", ret);
@@ -1204,6 +1219,7 @@ GENIF_client_request
   return ret;
 }
     
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 int
@@ -1304,6 +1320,7 @@ GENIF_client_reply
   return ret;
 }
 
+/*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
 int

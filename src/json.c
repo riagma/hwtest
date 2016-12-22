@@ -20,6 +20,7 @@ ______________________________________________________________________________*/
 
 #include <ctype.h>
 #include <errno.h>
+#include <json.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,10 +32,8 @@ ______________________________________________________________________________*/
 
 #include "trace_macros.h"
 #include "auxfunctions.h"
-
 #include "buffer.h"
-
-#include "jsonif.h"
+#include "json.h"
 
 /*__CONSTANTES________________________________________________________________*/
   
