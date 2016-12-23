@@ -80,12 +80,6 @@ static void GENIF_channel_read_cb
   const uv_buf_t*		inEvBuff
 );
 
-static void GENIF_channel_write
-(
-  GENIF_channel_t*		inChannel,
-  GENIF_message_t*		inMessage
-);
-
 static void GENIF_channel_write_cb(uv_write_t* inUvReq, int inStatus);
 
 static void GENIF_channel_process_in_msg_cb
@@ -1420,7 +1414,7 @@ GENIF_channel_process_in_msg_cb
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
-static void
+void
 GENIF_channel_write
 (
   GENIF_channel_t*		inChannel,
@@ -1538,10 +1532,10 @@ GENIF_channel_write_cb(uv_write_t* inUvReq, int inStatus)
 
 //----------------
 
-  ptrMessage = inChannel->outBuffMsg; inChannel->outBuffMsg = NULL;
-
   if(inStatus == 0)
   {
+    ptrMessage = inChannel->outBuffMsg; inChannel->outBuffMsg = NULL;
+
     GENIF_channel_process_out_msg_cb(inChannel, ptrMessage);
   }
 
@@ -1550,9 +1544,9 @@ GENIF_channel_write_cb(uv_write_t* inUvReq, int inStatus)
     GENIF_channel_error_cb(inChannel, inStatus);
   }
 
-//----------------
-
   GENIF_channel_mask(inChannel);
+
+//----------------
 
   if(inChannel->writeMask != GENIF_FLAG_ON)
   {

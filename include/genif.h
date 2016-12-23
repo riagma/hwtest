@@ -645,6 +645,14 @@ void GENIF_channel_write_disable(GENIF_channel_t* inChannel, int inFlag);
 
 //----------------
 
+void GENIF_channel_write
+(
+  GENIF_channel_t*		inChannel,
+  GENIF_message_t*		inMessage
+);
+
+//----------------
+
 int GENIF_channel_external_queue(GENIF_channel_t* inChannel, int inFlag);
 
 int GENIF_channel_send
