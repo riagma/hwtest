@@ -35,11 +35,11 @@ int main(void)
 
   JSON_object_t*	jsobj;
 
-  char*				json;
+  char*			json;
 
 //----------------
 
-  uv_loop_t			loop[1];
+  uv_loop_t		loop[1];
   uv_timer_t		timer1sec[1];
 
 //----------------

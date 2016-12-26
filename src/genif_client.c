@@ -61,6 +61,10 @@ static void GENIF_client_mask(GENIF_client_t* inClient);
 static void GENIF_client_input_mask(GENIF_client_t* inClient);
 static void GENIF_client_output_mask(GENIF_client_t* inClient);
 
+static void GENIF_client_dispatch(GENIF_client_t* inClient);
+
+//----------------
+
 static void GENIF_client_channel_close_cb
 ( 
   GENIF_client_t*		inClient,
@@ -114,8 +118,10 @@ GENIF_client_initialize
   TRAZA1("Entering in GENIF_client_initialize(%p)", inClient);
 
 //----------------
+
   GENIF_factory_initialize();
-//----------------
+
+  inClient->init = GENIF_TRUE;
 
   if(ret == GENIF_RC_OK)
   {
@@ -214,40 +220,45 @@ GENIF_client_finalize(GENIF_client_t* inClient)
 
 //----------------
 
-  while((ptrMessage = RLST_extractHead(inClient->outQueue)) != NULL)
+  if(inClient->init == GENIF_TRUE)
   {
-    GENIF_message_dump(ptrMessage, GENIF_MAXLEN_STRING + 1, strMessage);
+    inClient->init = GENIF_FALSE;
+
+    while((ptrMessage = RLST_extractHead(inClient->outQueue)) != NULL)
+    {
+      GENIF_message_dump(ptrMessage, GENIF_MAXLEN_STRING + 1, strMessage);
       
-    SUCESO1("WARNING: CANCELED QUEUED MESSAGE %s", strMessage);
-  }
+      SUCESO1("WARNING: CANCELED QUEUED MESSAGE %s", strMessage);
+    }
 
 //----------------
 
-  while((ptrChannel = RLST_extractHead(inClient->chnltmp)))
-  {
-    if(GENIF_channel_finalize(ptrChannel) != GENIF_RC_OK)
+    while((ptrChannel = RLST_extractHead(inClient->chnltmp)))
     {
-      SUCESO0("ERROR: GENIF_channel_finalize()");
+      if(GENIF_channel_finalize(ptrChannel) != GENIF_RC_OK)
+      {
+	SUCESO0("ERROR: GENIF_channel_finalize()");
+      }
+
+      GENIF_channel_delete(ptrChannel);
     }
 
-    GENIF_channel_delete(ptrChannel);
-  }
-
-  while((ptrChannel = RLST_extractHead(inClient->channel)))
-  {
-    if(GENIF_channel_finalize(ptrChannel) != GENIF_RC_OK)
+    while((ptrChannel = RLST_extractHead(inClient->channel)))
     {
-      SUCESO0("ERROR: GENIF_channel_finalize()");
-    }
+      if(GENIF_channel_finalize(ptrChannel) != GENIF_RC_OK)
+      {
+	SUCESO0("ERROR: GENIF_channel_finalize()");
+      }
 
-    GENIF_channel_delete(ptrChannel);
-  }
+      GENIF_channel_delete(ptrChannel);
+    }
   
 //----------------
 
-  if(uv_timer_stop(inClient->timer) < 0)
-  {
-    SUCESO0("FATAL: uv_timer_stop()");
+    if(uv_timer_stop(inClient->timer) < 0)
+    {
+      SUCESO0("FATAL: uv_timer_stop()");
+    }
   }
 
 //----------------
@@ -298,8 +309,6 @@ GENIF_client_initialize_hp
 
     STRCPY(inClient->locHost, inLocHost, GENIF_MAXLEN_HOST);
     inClient->locPort = inLocPort;
-
-    inClient->locFlag = GENIF_FLAG_ON;
 
     inClient->parent   = inParent;
     inClient->cbNotify = inCbNotify;
@@ -541,12 +550,6 @@ GENIF_client_timer_cb(uv_timer_t* inTimer)
 
 //----------------
 
-  inClient->outFlowCount = 0;
-
-  GENIF_client_mask(inClient);
-
-//----------------
-
   if(inClient->emptyFlag == GENIF_FLAG_ON)
   {
     if(GENIF_client_message_num(inClient, NULL, NULL, NULL) == 0)
@@ -557,6 +560,14 @@ GENIF_client_timer_cb(uv_timer_t* inTimer)
     }
   }
   
+//----------------
+
+  inClient->outFlowCount = 0;
+
+  GENIF_client_mask(inClient);
+
+  GENIF_client_dispatch(inClient);
+
 //----------------
 
   TRAZA0("Returning from GENIF_client_timer_cb()");
@@ -609,7 +620,7 @@ GENIF_client_connect(GENIF_client_t* inClient)
     ptrChannel->channel->data = ptrChannel;
     ptrChannel->connreq->data = ptrChannel;
 
-    if(inClient->locFlag == GENIF_FLAG_ON)
+    if(inClient->locHost[0] != 0)
     {
       if(uv_ip4_addr(inClient->locHost, inClient->locPort, addr) < 0)
       {
@@ -701,7 +712,7 @@ GENIF_client_connect_cb(uv_connect_t* inConnReq, int inStatus)
 
 //----------------
 
-  if(inClient->timer == NULL)
+  if(inClient->init == GENIF_FALSE)
   {
     SUCESO2("WARNING: CONNECT CALLBACK FOR A FINALIZED CLIENT (%s, %d)",
     	     inClient->remHost,
@@ -718,6 +729,12 @@ GENIF_client_connect_cb(uv_connect_t* inConnReq, int inStatus)
 
     inClient->counter->channelOpen++;
     
+    strcpy(inChannel->locHost, inClient->locHost);
+    strcpy(inChannel->remHost, inClient->remHost);
+
+    inChannel->locPort = inClient->locPort;
+    inChannel->remPort = inClient->remPort;
+
     GENIF_channel_read_disable(inChannel, inClient->disabledInput);
     GENIF_channel_write_disable(inChannel, inClient->disabledOutput);
 
@@ -831,7 +848,6 @@ GENIF_client_channel_close_cb
     GENIF_channel_delete(inChannel);
 
     inClient->reconnectFlag = GENIF_FLAG_ON;
-    
     inClient->reconnectTime = uv_now(inClient->loop);
   }
 
@@ -863,9 +879,7 @@ GENIF_client_empty_notify(GENIF_client_t* inClient)
   TRAZA1("Entering in GENIF_client_empty_notify(%p)", inClient);
 
 //----------------
-
   inClient->emptyFlag = GENIF_FLAG_ON;
-
 //----------------
 
   TRAZA0("Returning from GENIF_client_empty_notify()");
@@ -922,92 +936,12 @@ GENIF_client_output_disable(GENIF_client_t* inClient, int inFlag)
 static void
 GENIF_client_mask(GENIF_client_t* inClient)
 {
-  int				inputMask;
-  int				outputMask;
-  
-  GENIF_channel_t*		ptrChannel;
-
   TRAZA1("Entering in GENIF_client_mask(%p)", inClient);
 
 //----------------
 
-  inputMask = GENIF_FLAG_ON;
-
-  if(inClient->disabledInput == GENIF_FLAG_ON)
-  {
-    inputMask = GENIF_FLAG_OFF;
-  }
-
-  if(inClient->inputMask != inputMask)
-  {
-    inClient->inputMask = inputMask;
-
-    RLST_resetGet(inClient->channel, NULL);
-    
-    if(inputMask == GENIF_FLAG_ON)
-    {
-      while((ptrChannel = RLST_getNext(inClient->channel)))
-      {
-        GENIF_channel_read_disable(ptrChannel, GENIF_FLAG_OFF);
-      }
-    }
-
-    else
-    {
-      while((ptrChannel = RLST_getNext(inClient->channel)))
-      {
-        GENIF_channel_read_disable(ptrChannel, GENIF_FLAG_ON);
-      }
-    }
-  }
-  
-//----------------
-
-  outputMask = GENIF_FLAG_ON;
-
-  if(inClient->disabledOutput == GENIF_FLAG_ON)
-  {
-    outputMask = GENIF_FLAG_OFF;
-  }
-
-  if(inClient->config.outRefMax > 0)
-  {
-    if(inClient->outRefCount >= inClient->config.outRefMax)
-    {
-      outputMask = GENIF_FLAG_OFF;
-    }
-  }
-
-  if(inClient->config.outFlowMax > 0)
-  {
-    if(inClient->outFlowCount >= inClient->config.outFlowMax)
-    {
-      outputMask = GENIF_FLAG_OFF;
-    }
-  }
-
-  if(inClient->outputMask != outputMask)
-  {
-    inClient->outputMask = outputMask;
-    
-    RLST_resetGet(inClient->channel, NULL);
-    
-    if(outputMask == GENIF_FLAG_ON)
-    {
-      while((ptrChannel = RLST_getNext(inClient->channel)))
-      {
-        GENIF_channel_write_disable(ptrChannel, GENIF_FLAG_OFF);
-      }
-    }
-
-    else
-    {
-      while((ptrChannel = RLST_getNext(inClient->channel)))
-      {
-        GENIF_channel_write_disable(ptrChannel, GENIF_FLAG_ON);
-      }
-    }
-  }
+  GENIF_client_input_mask(inClient);
+  GENIF_client_output_mask(inClient);
   
 //----------------
 
@@ -1101,6 +1035,24 @@ GENIF_client_output_mask(GENIF_client_t* inClient)
   if(inClient->outputMask != outputMask)
   {
     inClient->outputMask = outputMask;
+
+    RLST_resetGet(inClient->channel, NULL);
+
+    if(outputMask == GENIF_FLAG_ON)
+    {
+      while((ptrChannel = RLST_getNext(inClient->channel)))
+      {
+        GENIF_channel_write_disable(ptrChannel, GENIF_FLAG_OFF);
+      }
+    }
+
+    else
+    {
+      while((ptrChannel = RLST_getNext(inClient->channel)))
+      {
+        GENIF_channel_write_disable(ptrChannel, GENIF_FLAG_ON);
+      }
+    }
   }
 
 //----------------
@@ -1125,9 +1077,7 @@ GENIF_client_external_queue_set
 	  inExtQueueFunc);
 
 //----------------
-
   inClient->extQueueFunc = inExtQueueFunc;
-
 //----------------
 
   TRAZA1("Returning from GENIF_client_external_queue_set() = %d", ret);
@@ -1189,61 +1139,65 @@ GENIF_client_send
 
 //----------------
 
-  if(inClient->outputMask == GENIF_FLAG_ON)
+  inClient->counter->channel.outRequest++;
+
+  if(inClient->config.outQueueMax > 0)
   {
-    RLST_resetGet(inClient->channel, NULL);
-
-    ptrChannel = RLST_getNext(inClient->channel);
-
-    while(ptrChannel != NULL)
+    if(RLST_getNumElem(inClient->outQueue) >= inClient->config.outQueueMax)
     {
-      if(ptrChannel->outBuffMsg == NULL)
-      {
-	ret = GENIF_channel_send(ptrChannel, inMessage);
+      inClient->counter->channel.outRequestError++;
 
-	ptrChannel = NULL; sent = GENIF_TRUE;
-      }
-
-      else
-      {
-	GENIF_channel_external_queue(ptrChannel, GENIF_FLAG_ON);
-
-	ptrChannel = RLST_getNext(inClient->channel);
-      }
+      ret = GENIF_RC_QUEUE_FULL;
     }
   }
 
 //----------------
 
-  if(sent == GENIF_FALSE)
+  if(ret == GENIF_RC_OK)
   {
-    inClient->counter->channel.outMessage++;
+    inMessage->type    = GENIF_MESSAGE_TYPE_MESSAGE;
+    inMessage->channel = NULL;
+    inMessage->T       = uv_now(inClient->loop);
 
-    if(inClient->config.outQueueMax > 0)
+    if(inClient->outputMask == GENIF_FLAG_ON)
     {
-      if(RLST_getNumElem(inClient->outQueue) >= inClient->config.outQueueMax)
-      {
-	inClient->counter->channel.outMessageError++;
+      RLST_resetGet(inClient->channel, NULL);
 
-	ret = GENIF_RC_QUEUE_FULL;
+      ptrChannel = RLST_getNext(inClient->channel);
+
+      while(ptrChannel != NULL)
+      {
+	if(ptrChannel->writeMask == GENIF_TRUE && ptrChannel->outBuffMsg == NULL)
+	{
+	  inClient->outFlowCount++; inClient->outRefCount++;
+
+	  inMessage->channel = ptrChannel;
+
+	  GENIF_channel_write(ptrChannel, inMessage);
+
+	  ptrChannel = NULL; sent = GENIF_TRUE;
+	}
+
+	else // ptrChannel->outBuffMsg != NULL
+	{
+	  GENIF_channel_external_queue(ptrChannel, GENIF_FLAG_ON);
+
+	  ptrChannel = RLST_getNext(inClient->channel);
+	}
       }
     }
 
-    if(ret == GENIF_RC_OK)
+    if(sent == GENIF_FALSE)
     {
-      inMessage->type    = GENIF_MESSAGE_TYPE_MESSAGE;
-      inMessage->channel = NULL;
-      inMessage->T       = uv_now(inClient->loop);
-
       if(RLST_insertTail(inClient->outQueue, inMessage) < 0)
       {
 	GENIF_FATAL0("FATAL: RLST_insertTail()");
       }
     }
+
+    else { GENIF_client_output_mask(inClient); }
   }
 
-//----------------
-  GENIF_client_mask(inClient);
 //----------------
 
   TRAZA1("Returning from GENIF_client_send() = %d", ret);
@@ -1298,7 +1252,7 @@ GENIF_client_request
 
       while(ptrChannel != NULL)
       {
-        if(ptrChannel->outBuffMsg == NULL)
+	if(ptrChannel->writeMask == GENIF_TRUE && ptrChannel->outBuffMsg == NULL)
         {
           inClient->outFlowCount++; inClient->outRefCount++;
 
@@ -1309,7 +1263,7 @@ GENIF_client_request
           ptrChannel = NULL; sent = GENIF_TRUE;
         }
 
-        else
+        else // ptrChannel->outBuffMsg != NULL
         {
           GENIF_channel_external_queue(ptrChannel, GENIF_FLAG_ON);
 
@@ -1355,31 +1309,33 @@ GENIF_client_dispatch(GENIF_client_t* inClient)
 
     ptrChannel = RLST_getNext(inClient->channel);
 
-    ptrMessage = RLST_gettHead(inClient->outQueue);
+    ptrMessage = RLST_getHead(inClient->outQueue);
 
     while(ptrChannel != NULL && ptrMessage != NULL)
     {
       if(ptrChannel->writeMask == GENIF_TRUE && ptrChannel->outBuffMsg == NULL)
       {
-	ptrMessage = RLST_extractHead(inClient->outQueue);
+	RLST_extract(inClient->outQueue, ptrMessage);
 
-	if(ptrMessage != NULL)
+	inClient->outFlowCount++;
+
+	if(ptrMessage->type == GENIF_MESSAGE_TYPE_REQUEST)
 	{
-          inClient->outFlowCount++; inClient->outRefCount++;
-
-          ptrMessage->channel = ptrChannel;
-
-          GENIF_channel_write(ptrChannel, ptrMessage);
-
-          GENIF_client_output_mask(inClient);
-
-          if(inClient->outputMask == GENIF_FLAG_ON)
-          {
-            ptrChannel = RLST_getNext(inClient->channel);
-          }
-
-          else { ptrChannel = NULL; }
+	  inClient->outRefCount++;
 	}
+
+	ptrMessage->channel = ptrChannel;
+
+	GENIF_channel_write(ptrChannel, ptrMessage);
+
+	GENIF_client_output_mask(inClient);
+
+	if(inClient->outputMask == GENIF_FLAG_ON)
+	{
+	  ptrChannel = RLST_getNext(inClient->channel);
+	}
+
+	else { ptrChannel = NULL; }
       }
 
       else // if(ptrChannel->outBuffMsg != NULL)

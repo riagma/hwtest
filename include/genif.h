@@ -415,6 +415,8 @@ typedef struct GENIF_client_counter_tag
 
 struct GENIF_client_tag 
 {
+  int				init;
+
   uv_loop_t*			loop;
   uv_timer_t			timer[1];
 
@@ -423,7 +425,6 @@ struct GENIF_client_tag
 
   char				locHost[GENIF_MAXLEN_HOST + 1];
   int				locPort;
-  int				locFlag;
   
   void*				parent;
 

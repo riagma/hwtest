@@ -80,6 +80,8 @@ static void GENIF_channel_read_cb
   const uv_buf_t*		inEvBuff
 );
 
+static void GENIF_channel_write_cont(GENIF_channel_t* inChannel);
+
 static void GENIF_channel_write_cb(uv_write_t* inUvReq, int inStatus);
 
 static void GENIF_channel_process_in_msg_cb
@@ -937,7 +939,9 @@ GENIF_channel_read_disable(GENIF_channel_t* inChannel, int inFlag)
 
   if(inChannel->disabledRead != inFlag)
   {
-    inChannel->disabledRead = inFlag; GENIF_channel_mask(inChannel);
+    inChannel->disabledRead = inFlag;
+
+    GENIF_channel_mask(inChannel);
   }
 
 //----------------
@@ -956,7 +960,9 @@ GENIF_channel_write_disable(GENIF_channel_t* inChannel, int inFlag)
 
   if(inChannel->disabledWrite != inFlag)
   {
-    inChannel->disabledWrite = inFlag; GENIF_channel_mask(inChannel);
+    inChannel->disabledWrite = inFlag;
+
+    GENIF_channel_mask(inChannel);
   }
 
 //----------------
@@ -1057,6 +1063,11 @@ GENIF_channel_write_mask(GENIF_channel_t* inChannel)
   {
     writeMask = 1;
 
+    if(inChannel->disabledWrite == GENIF_FLAG_ON)
+    {
+      writeMask = 0;
+    }
+
     if(inChannel->config->outFlowMax > 0)
     {
       if(inChannel->outFlowCount >= inChannel->config->outFlowMax)
@@ -1076,6 +1087,11 @@ GENIF_channel_write_mask(GENIF_channel_t* inChannel)
     if(inChannel->writeMask != writeMask)
     {
       inChannel->writeMask = writeMask;
+
+      if(inChannel->writeMask == GENIF_FLAG_ON)
+      {
+	GENIF_channel_write_cont(inChannel);
+      }
     }
   }
 
@@ -1414,6 +1430,49 @@ GENIF_channel_process_in_msg_cb
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 
+static void
+GENIF_channel_write_cont(GENIF_channel_t* inChannel)
+{
+  GENIF_message_t*		ptrMessage = NULL;
+
+  TRAZA1("Entering in GENIF_channel_write_cont(%p)", inChannel);
+
+//----------------
+
+  if(inChannel->writeMask == GENIF_FLAG_ON && inChannel->outBuffMsg == NULL)
+  {
+    if(inChannel->extQueueFlag == GENIF_FLAG_ON)
+    {
+      if(inChannel->extQueueFunc != NULL)
+      {
+	ptrMessage = inChannel->extQueueFunc(inChannel);
+      }
+
+      if(ptrMessage == NULL)
+      {
+        inChannel->extQueueFlag = GENIF_FLAG_OFF;
+
+        ptrMessage = RLST_extractHead(inChannel->outQueue);
+      }
+
+      else { ptrMessage->channel = inChannel; }
+    }
+
+    else { ptrMessage = RLST_extractHead(inChannel->outQueue); }
+
+    if(ptrMessage != NULL)
+    {
+      GENIF_channel_write(inChannel, ptrMessage);
+    }
+  }
+
+//----------------
+
+  TRAZA0("Returning from GENIF_channel_write_cont()");
+}
+
+/*----------------------------------------------------------------------------*/
+
 void
 GENIF_channel_write
 (
@@ -1548,7 +1607,7 @@ GENIF_channel_write_cb(uv_write_t* inUvReq, int inStatus)
 
 //----------------
 
-  if(inChannel->writeMask != GENIF_FLAG_ON)
+  if(inChannel->writeMask == GENIF_FLAG_ON)
   {
     if(inChannel->extQueueFlag == GENIF_FLAG_ON)
     {
@@ -1683,7 +1742,9 @@ GENIF_channel_external_queue(GENIF_channel_t* inChannel, int inFlag)
 
   if(inChannel->extQueueFlag != inFlag)
   {
-    inChannel->extQueueFlag = inFlag; // GENIF_channel_mask(inChannel);
+    inChannel->extQueueFlag = inFlag;
+
+    GENIF_channel_mask(inChannel);
   }
 
 //----------------
